@@ -4,8 +4,8 @@ SkolAnalys är en AI-driven plattform för analys av skoldata. Den använder RAG
 
 ## Projektöversikt
 
-Projektet transformerar skoldata (CSV-filer) till användbara insikter genom:
-- **Data Ingest**: Laddar upp CSV-data till PostgreSQL med pgvector-embeddings
+ Projektet transformerar skoldata (CSV-filer) till användbara insikter genom:
+- **Data Ingest**: Laddar upp CSV-data till PostgreSQL med pgvector-embeddings. CSV-struktur/kolumnnamn kan bytas ut mot verkliga data så länge filerna ligger i `data/` och har header-rad; innehållet chunktas som fri text, så modellen kan hantera andra kolumner utan schemaändring.
 - **Semantic Search**: Hämtar relevant data baserat på användarfrågor via pgvector
 - **AI Analysis**: Använder Gemini/OpenAI för att analysera och presentera insikter
 - **Web Interface**: Användarvänligt gränssnitt för att interagera med analysen
@@ -21,7 +21,7 @@ Projektet transformerar skoldata (CSV-filer) till användbara insikter genom:
 5. De mest relevanta chunks returneras för AI-analys
 
 **Fördelarna:**
-- ✅ Gratis PostgreSQL på Render (ingen Pinecone-kostnad)
+- ✅ Gratis PostgreSQL på Render
 - ✅ Vektorer lagras lokalt, ingen extern tjänst
 - ✅ Möjliggör hybrid-sökning: vektorer + SQL-aggregation
 - ✅ Bättre kontroll över chunking-strategi
@@ -291,68 +291,4 @@ Internt projekt för skolanalys
 
 ### CSV-data som stöds
 
-1. **Prognos för barn (0-5)**: Befolkningsprognoser per distrikt och år
-2. **Skolanläggningar**: Byggnad, område, kapacitet, underhållsbehov
-3. **Elevdata**: Inskriving, betyg, särskilda behov, background
-4. **Personal**: Lärare, support, sjukfrånvaro, turnover
-5. **Ekonomi**: Kostnader, budget per elev
-6. **Scenarier**: Konsolideringsplaner och alternativ
-7. **Prognoser**: Förväntade nya elever
 
-### Exempel på analysfrågor
-
-- "Vad är enrollmenttrendet i Centrum-distriktet?"
-- "Vilka skolor har högst underhållsbehov?"
-- "Hur är kapacitetsanvändningen på skolorna?"
-- "Vilka är de ekonomiska trenderna per elev?"
-- "Vad förväntas för elevantal 2030?"
-
-## Environment-variabler
-
-| Variabel | Beskrivning | Obligatorisk |
-|----------|-------------|------------|
-| `GEMINI_API_KEY` | Google Gemini API-nyckel | Ja |
-| `OPENAI_API_KEY` | OpenAI API-nyckel (fallback) | Nej |
-| `PINECONE_API_KEY` | Pinecone API-nyckel | Ja |
-| `PINECONE_INDEX_HOST` | Pinecone index host | Ja |
-| `PINECONE_NAMESPACE` | Namespace i Pinecone | Nej (default: skolanalys) |
-| `EMBED_DIM` | Embedding dimension | Nej (default: 768) |
-| `SYSTEM_PROMPT_PATH` | Path till system prompt | Nej (default: system_prompt.txt) |
-
-## Felsökning
-
-### Data läds inte in
-- Kontrollera att CSV-filer är i `data/`-mappen
-- Verifiera Pinecone API-nyckeln
-- Kontrollera loggarna för embedding-fel
-
-### Gemini API-fel
-- Verifiera GEMINI_API_KEY
-- OpenAI fungerar som fallback om konfigurerad
-- Kontrollera API-quotor
-
-### Inga resultat från sökning
-- Säkerställ att data är inladdat i Pinecone
-- Kontrollera namespace setting (`skolanalys`)
-- Prova en enklare söksträng
-
-## Utveckling
-
-### Lägg till nya CSV-filer
-1. Placera CSV-fil i `data/`-mappen
-2. Lägg till filnamn i `csv_files`-listan i `ingest_school_data.py`
-3. Kör `python ingest_school_data.py data/`
-
-### Anpassa systemprompten
-Redigera `system_prompt.txt` för att ändra AI:s beteende och fokusarea.
-
-### Lägg till ny analys-typ
-Se `rag_backend.py` och `app.py` för hur sökning och AI-analys integreras.
-
-## Support & Kontakt
-
-Se `system_prompt.txt` för mer information om systemets instruktioner och fokusområden.
-
-## Licens
-
-Internt projekt för skolanalys
