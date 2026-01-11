@@ -278,6 +278,13 @@ def chat(req: ChatRequest):
             answer = "I'm sorry, I can't answer that. Please contact HR"
 
     # 4) Append our own “Sources” footer (the prompt also asks for this style)
-    answer_with_sources = answer + "\n\n" + sources_md
+    # 4) Check if answer is empty (Gemini sometimes returns empty on complex prompts)
+    if not answer or not answer.strip():
+        logger.warning("Empty answer from model, using data summary")
+        # Build a basic summary from retrieved docs
+        answer = "Baserat på tillgänglig data:\n" + "\n".join([f"• {d['text'][:100]}..." for d in docs[:3]])
+    
+    # 5) Append our own "Sources" footer
+    answer_with_sources = answer.strip() + "\n\n" + sources_md
 
     return ChatResponse(reply=answer_with_sources)
