@@ -219,6 +219,66 @@ def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
                 # Non-fatal; continue with existing docs
                 pass
 
+        # If the query references economy/costs/budget, include economy file chunks
+        if ("ekonomi" in ql) or ("economy" in ql) or ("budget" in ql) or ("kostnad" in ql) or ("cost" in ql) or ("msek" in ql):
+            try:
+                cur.execute(
+                    """
+                        SELECT 
+                            id,
+                            chunk_text,
+                            source_file,
+                            start_row,
+                            end_row,
+                            1 - (embedding <=> %s::vector) as score
+                        FROM school_embeddings
+                        WHERE source_file = %s
+                        ORDER BY embedding <=> %s::vector
+                        LIMIT %s;
+                    """,
+                    (vec, "ekonomi_economy.csv", vec, max(10, min(top_k, 15))),
+                )
+                eco_results = cur.fetchall()
+                for row in eco_results:
+                    docs.append({
+                        "score": row[5],
+                        "text": row[1],
+                        "file": row[2],
+                        "url": row[2],
+                    })
+            except Exception:
+                pass
+
+        # If the query references students/enrollment, include students file chunks
+        if ("elever" in ql) or ("students" in ql) or ("enrolled" in ql) or ("student" in ql):
+            try:
+                cur.execute(
+                    """
+                        SELECT 
+                            id,
+                            chunk_text,
+                            source_file,
+                            start_row,
+                            end_row,
+                            1 - (embedding <=> %s::vector) as score
+                        FROM school_embeddings
+                        WHERE source_file = %s
+                        ORDER BY embedding <=> %s::vector
+                        LIMIT %s;
+                    """,
+                    (vec, "elever_students.csv", vec, max(10, min(top_k, 15))),
+                )
+                stu_results = cur.fetchall()
+                for row in stu_results:
+                    docs.append({
+                        "score": row[5],
+                        "text": row[1],
+                        "file": row[2],
+                        "url": row[2],
+                    })
+            except Exception:
+                pass
+
         return docs
         
     finally:

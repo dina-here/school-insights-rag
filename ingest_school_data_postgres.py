@@ -159,7 +159,7 @@ def load_csv_file(filepath: str) -> List[Dict[str, Any]]:
     return rows
 
 
-def create_chunks_from_csv(filepath: str, filename: str, chunk_size: int = 10) -> List[Dict[str, Any]]:
+def create_chunks_from_csv(filepath: str, filename: str, chunk_size: int = 5) -> List[Dict[str, Any]]:
     """Create text chunks from CSV data."""
     rows = load_csv_file(filepath)
     chunks = []
