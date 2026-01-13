@@ -184,11 +184,19 @@ def chat(req: ChatRequest):
     docs = get_school_analysis(message, top_k=40)
     sources_md = build_sources_markdown(docs)
 
-    # Concatenate retrieved snippets - limit to 12000 chars for token control
-    context = "\n\n".join(f"- {d['text']}" for d in docs)[:12000]
+    # Filter docs based on query intent for focused analysis
+    ql = message.lower()
+    
+    # If query is specifically about student counts, prioritize only student data
+    if (("elever" in ql or "students" in ql) and 
+        ("totalt" in ql or "total" in ql or "antal" in ql or "many" in ql or "count" in ql)):
+        # Keep only elever_students.csv for total count queries
+        docs = [d for d in docs if d.get("file") == "elever_students.csv"]
+    
+    # Concatenate retrieved snippets - increased limit for complete data
+    context = "\n\n".join(f"- {d['text']}" for d in docs)[:35000]
 
     # Evidence gating: ensure required source files are present for the query intent
-    ql = message.lower()
     present_files = {d.get("file") for d in docs}
     required_files = []
     if ("ekonomi" in ql) or ("economy" in ql) or ("budget" in ql) or ("kostnad" in ql) or ("cost" in ql):
