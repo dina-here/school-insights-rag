@@ -183,8 +183,8 @@ def chat(req: ChatRequest):
     docs = get_school_analysis(message, top_k=10)
     sources_md = build_sources_markdown(docs)
 
-    # Concatenate retrieved snippets - limit to 2000 chars for token control
-    context = "\n\n".join(f"- {d['text']}" for d in docs)[:2000]
+    # Concatenate retrieved snippets - limit to 8000 chars for token control
+    context = "\n\n".join(f"- {d['text']}" for d in docs)[:8000]
 
     # 2) Build instruction that includes:
     #    - the original system prompt from system_prompt.txt
@@ -246,7 +246,7 @@ def chat(req: ChatRequest):
                 response = openai_client.chat.completions.create(
                     model=OPENAI_MODEL,
                     messages=openai_messages,
-                    max_completion_tokens=400,
+                    max_completion_tokens=1500,
                 )
                 answer = response.choices[0].message.content.strip()
                 # Collect OpenAI usage
