@@ -186,7 +186,39 @@ def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
                 "file": row[2],
                 "url": row[2],  # Use filename as URL
             })
-        
+
+        # If the query references forecasts/0-5 children, ensure forecast file chunks are included
+        ql = query.lower()
+        if ("prognos" in ql) or ("forecast" in ql) or ("0-5" in ql) or ("0–5" in ql) or ("0 to 5" in ql) or ("entrants" in ql):
+            try:
+                cur.execute(
+                    """
+                        SELECT 
+                            id,
+                            chunk_text,
+                            source_file,
+                            start_row,
+                            end_row,
+                            1 - (embedding <=> %s::vector) as score
+                        FROM school_embeddings
+                        WHERE source_file = %s
+                        ORDER BY embedding <=> %s::vector
+                        LIMIT %s;
+                    """,
+                    (vec, "prognosbarn_0_5_forecast.csv", vec, max(10, min(top_k, 15))),
+                )
+                forecast_results = cur.fetchall()
+                for row in forecast_results:
+                    docs.append({
+                        "score": row[5],
+                        "text": row[1],
+                        "file": row[2],
+                        "url": row[2],
+                    })
+            except Exception:
+                # Non-fatal; continue with existing docs
+                pass
+
         return docs
         
     finally:

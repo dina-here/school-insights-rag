@@ -180,8 +180,8 @@ def chat(req: ChatRequest):
         METRICS["requests"] += 1
     
     # 1) Call the "get_school_analysis tool" to retrieve relevant school data
-    # Use top_k=20 to ensure all districts/schools are covered (30 schools in 13 chunks)
-    docs = get_school_analysis(message, top_k=20)
+    # Use top_k=30 to cover larger files (e.g., 271 rows -> ~28 chunks)
+    docs = get_school_analysis(message, top_k=30)
     sources_md = build_sources_markdown(docs)
 
     # Concatenate retrieved snippets - limit to 8000 chars for token control
