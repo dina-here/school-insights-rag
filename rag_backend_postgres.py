@@ -266,7 +266,7 @@ def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
                         ORDER BY embedding <=> %s::vector
                         LIMIT %s;
                     """,
-                    (vec, "elever_students.csv", vec, max(10, min(top_k, 15))),
+                    (vec, "elever_students.csv", vec, 50),  # Increased limit to ensure all chunks are retrieved
                 )
                 stu_results = cur.fetchall()
                 for row in stu_results:
