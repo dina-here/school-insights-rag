@@ -212,6 +212,13 @@ def ingest_school_data(data_dir: str = "data") -> int:
     for filepath in csv_files:
         filename = os.path.basename(filepath)
         logger.info(f"Processing {filename}...")
+        # Purge existing chunks for this source to avoid mixed chunk sizes
+        try:
+            cur.execute("DELETE FROM school_embeddings WHERE source_file = %s", (filename,))
+            conn.commit()
+            logger.info(f"Purged existing chunks for {filename}")
+        except Exception as e:
+            logger.warning(f"Could not purge {filename}: {e}")
         
         chunks = create_chunks_from_csv(filepath, filename)
         
