@@ -287,15 +287,17 @@ def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
 
 
 def build_sources_markdown(docs: List[Dict[str, Any]]) -> str:
-    """Format like the example in system_prompt.txt."""
-    lines = ["Sources:"]
-    # make each file appear only once
+    """Format sources in Swedish with numbered references."""
+    lines = ["Källor:"]
+    # make each file appear only once with sequential numbering
     seen = {}
+    counter = 1
     for d in docs:
         file = d["file"] or "Document"
         if file in seen:
             continue
         seen[file] = True
         url = d.get("url") or file
-        lines.append(f"- ^1 [{file}]({url})")
+        lines.append(f"- ^{counter} [{file}]({url})")
+        counter += 1
     return "\n".join(lines)
