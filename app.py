@@ -182,19 +182,11 @@ def chat(req: ChatRequest):
     # 1) Call the "get_school_analysis tool" to retrieve relevant school data
     # Use top_k=40 to cover larger files and diverse sources
     docs = get_school_analysis(message, top_k=40)
-    sources_md = build_sources_markdown(docs)
-
-    # Filter docs based on query intent for focused analysis
-    ql = message.lower()
-    
-    # If query is specifically about student counts, prioritize only student data
-    if (("elever" in ql or "students" in ql) and 
-        ("totalt" in ql or "total" in ql or "antal" in ql or "many" in ql or "count" in ql)):
-        # Keep only elever_students.csv for total count queries
-        docs = [d for d in docs if d.get("file") == "elever_students.csv"]
     
     # Concatenate retrieved snippets - increased limit for complete data
     context = "\n\n".join(f"- {d['text']}" for d in docs)[:35000]
+    
+    sources_md = build_sources_markdown(docs)
 
     # 2) Build instruction that includes:
     #    - the original system prompt from system_prompt.txt
