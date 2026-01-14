@@ -162,43 +162,76 @@ def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
                     break
             
             if target_district and target_year:
-                # Query: sum all students for target district and year
-                cur.execute("""
-                    SELECT 
-                        gsd.District,
-                        es.Year,
-                        COUNT(DISTINCT gsd.School) as school_count,
-                        SUM(es.Enrolled_Students) as total_students,
-                        AVG(es.Enrolled_Students) as avg_per_school
-                    FROM school_embeddings se_gsd
-                    JOIN school_embeddings se_es ON 1=1
-                    CROSS JOIN (
-                        SELECT 
-                            substring(chunk_text from 'School: (\w+)') as school,
-                            CAST(substring(chunk_text from 'Year: (\d+)') AS INT) as year,
-                            CAST(substring(chunk_text from 'Enrolled_Students: (\d+)') AS INT) as enrolled
-                        FROM school_embeddings
-                        WHERE source_file = 'elever_students.csv'
-                    ) es
-                    CROSS JOIN (
-                        SELECT 
-                            substring(chunk_text from 'School: (\w+)') as school,
-                            substring(chunk_text from 'District: (\w+)') as district
-                        FROM school_embeddings
-                        WHERE source_file = 'grundskoleforvaltning_goteborg_syntetisk_data.csv'
-                    ) gsd
-                    WHERE es.school = gsd.school
-                        AND gsd.district = %s
-                        AND es.year = %s
-                    GROUP BY gsd.District, es.Year;
-                """, (target_district, target_year))
+                # Get all chunks for this district and year
+                # Query elever_students.csv for year, then grundskoleforvaltning for district match
+                cur.execute(
+                    "SELECT chunk_text FROM school_embeddings WHERE source_file = %s;",
+                    ("elever_students.csv",)
+                )
+                elever_chunks = [row[0] for row in cur.fetchall()]
                 
-                result = cur.fetchone()
-                if result:
-                    district, year, school_count, total_students, avg_per_school = result
+                cur.execute(
+                    "SELECT chunk_text FROM school_embeddings WHERE source_file = %s;",
+                    ("grundskoleforvaltning_goteborg_syntetisk_data.csv",)
+                )
+                gsd_chunks = [row[0] for row in cur.fetchall()]
+                
+                # Parse student data by school/year
+                import re
+                student_data = {}  # school -> { year -> enrolled }
+                for chunk in elever_chunks:
+                    # Find all Year: and Enrolled_Students: pairs with School
+                    lines = chunk.split('\n')
+                    current_school = None
+                    for line in lines:
+                        if 'School:' in line:
+                            m = re.search(r'School:\s*(\S+)', line)
+                            if m:
+                                current_school = m.group(1).rstrip(',')
+                        elif 'Year:' in line and current_school:
+                            m = re.search(r'Year:\s*(\d+)', line)
+                            year = int(m.group(1)) if m else None
+                            # Look for Enrolled_Students in same or next few lines
+                            for enrolled_line in chunk.split('\n')[chunk.split('\n').index(line):]:
+                                if 'Enrolled_Students:' in enrolled_line:
+                                    m = re.search(r'Enrolled_Students:\s*(\d+)', enrolled_line)
+                                    enrolled = int(m.group(1)) if m else 0
+                                    if year not in student_data:
+                                        student_data[current_school] = {}
+                                    student_data[current_school][year] = enrolled
+                                    break
+                
+                # Parse district data
+                school_to_district = {}  # school -> district
+                for chunk in gsd_chunks:
+                    lines = chunk.split('\n')
+                    current_school = None
+                    for line in lines:
+                        if 'School:' in line:
+                            m = re.search(r'School:\s*(\S+)', line)
+                            if m:
+                                current_school = m.group(1).rstrip(',')
+                        elif 'District:' in line and current_school:
+                            m = re.search(r'District:\s*(\S+)', line)
+                            district = m.group(1).rstrip(',') if m else None
+                            if district:
+                                school_to_district[current_school] = district
+                
+                # Aggregate for target district and year
+                schools_in_district = [s for s, d in school_to_district.items() if d == target_district]
+                total_students = 0
+                school_count = 0
+                
+                for school in schools_in_district:
+                    if school in student_data and target_year in student_data[school]:
+                        school_count += 1
+                        total_students += student_data[school][target_year]
+                
+                if school_count > 0:
+                    avg_per_school = total_students / school_count
                     doc_text = (
-                        f"**Elevantal i {district} år {year}**\n"
-                        f"- Antal skolor: {school_count}\n"
+                        f"**Elevantal i {target_district} år {target_year}**\n"
+                        f"- Antal skolor med data: {school_count}\n"
                         f"- Totalt elevantal: {total_students}\n"
                         f"- Genomsnitt per skola: {avg_per_school:.0f}"
                     )
