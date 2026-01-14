@@ -50,12 +50,12 @@ def aggregate_district_foreign_background(district: str) -> Dict[str, Any]:
     cur = conn.cursor()
     
     try:
-        # Get all chunks mentioning this district
+        # Get all chunks mentioning this district (filename-agnostic)
         cur.execute(
             """SELECT chunk_text FROM school_embeddings 
-               WHERE source_file = %s 
-               AND chunk_text ILIKE %s;""",
-            ("grundskoleforvaltning_goteborg_syntetisk_data.csv", f"%{district}%"),
+               WHERE chunk_text ILIKE '%District:%' 
+                 AND chunk_text ILIKE %s;""",
+            (f"%{district}%",),
         )
         
         chunks = [row[0] for row in cur.fetchall()]
@@ -169,14 +169,21 @@ def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
             if target_district and target_year:
                 # Get all chunks for this district and year
                 cur.execute(
-                    "SELECT chunk_text FROM school_embeddings WHERE source_file = %s;",
-                    ("elever_students.csv",)
+                    """
+                    SELECT chunk_text FROM school_embeddings 
+                    WHERE chunk_text ILIKE '%Year:%'
+                      AND chunk_text ILIKE '%School:%'
+                      AND chunk_text ILIKE '%Enrolled_Students:%';
+                    """
                 )
                 elever_text = "\n".join([row[0] for row in cur.fetchall()])
                 
                 cur.execute(
-                    "SELECT chunk_text FROM school_embeddings WHERE source_file = %s;",
-                    ("grundskoleforvaltning_goteborg_syntetisk_data.csv",)
+                    """
+                    SELECT chunk_text FROM school_embeddings 
+                    WHERE chunk_text ILIKE '%School:%'
+                      AND chunk_text ILIKE '%District:%';
+                    """
                 )
                 gsd_text = "\n".join([row[0] for row in cur.fetchall()])
                 
@@ -262,8 +269,8 @@ def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
                     return [{
                         "score": 1.0,
                         "text": doc_text,
-                        "file": "elever_students.csv",
-                        "url": "elever_students.csv",
+                        "file": "aggregated_students",
+                        "url": "aggregated_students",
                     }]
             
             cur.close()
@@ -286,8 +293,8 @@ def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         return [{
             "score": 1.0,
             "text": doc_text,
-            "file": "grundskoleforvaltning_goteborg_syntetisk_data.csv",
-            "url": "grundskoleforvaltning_goteborg_syntetisk_data.csv",
+            "file": "aggregated_districts",
+            "url": "aggregated_districts",
         }]
     
     # Fall back to vector search
@@ -338,11 +345,16 @@ def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
                             end_row,
                             1 - (embedding <=> %s::vector) as score
                         FROM school_embeddings
-                        WHERE source_file = %s
+                        WHERE (
+                            chunk_text ILIKE '%prognos%'
+                            OR chunk_text ILIKE '%forecast%'
+                            OR chunk_text ILIKE '%0-5%'
+                            OR chunk_text ILIKE '%entrants%'
+                        )
                         ORDER BY embedding <=> %s::vector
                         LIMIT %s;
                     """,
-                    (vec, "prognosbarn_0_5_forecast.csv", vec, max(10, min(top_k, 15))),
+                    (vec, vec, max(10, min(top_k, 15))),
                 )
                 forecast_results = cur.fetchall()
                 for row in forecast_results:
@@ -369,11 +381,19 @@ def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
                             end_row,
                             1 - (embedding <=> %s::vector) as score
                         FROM school_embeddings
-                        WHERE source_file = %s
+                        WHERE (
+                            chunk_text ILIKE '%msek%'
+                            OR chunk_text ILIKE '%operating_cost%'
+                            OR chunk_text ILIKE '%maintenance_cost%'
+                            OR chunk_text ILIKE '%budget%'
+                            OR chunk_text ILIKE '%kostnad%'
+                            OR chunk_text ILIKE '%economy%'
+                            OR chunk_text ILIKE '%ekonomi%'
+                        )
                         ORDER BY embedding <=> %s::vector
                         LIMIT %s;
                     """,
-                    (vec, "ekonomi_economy.csv", vec, max(10, min(top_k, 15))),
+                    (vec, vec, max(10, min(top_k, 15))),
                 )
                 eco_results = cur.fetchall()
                 for row in eco_results:
@@ -399,11 +419,11 @@ def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
                             end_row,
                             1 - (embedding <=> %s::vector) as score
                         FROM school_embeddings
-                        WHERE source_file = %s
+                        WHERE chunk_text ILIKE '%Enrolled_Students:%'
                         ORDER BY embedding <=> %s::vector
                         LIMIT %s;
                     """,
-                    (vec, "elever_students.csv", vec, 50),  # Increased limit to ensure all chunks are retrieved
+                    (vec, vec, 50),
                 )
                 stu_results = cur.fetchall()
                 for row in stu_results:
