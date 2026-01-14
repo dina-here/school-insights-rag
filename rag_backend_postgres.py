@@ -145,7 +145,114 @@ def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
     # Special case: for queries about student counts by area, compute aggregation directly
     ql = query.lower()
     
-    # Check for district-specific student counts first (higher priority than total)
+    # Check for enrollment trend queries first (includes both historical data and forecasts)
+    is_trend_query = (any(keyword in ql for keyword in ["trend", "inskrivning", "utveckling", "förändring"]) and 
+                     any(d.lower() in ql for d in ["Hisingen", "Sydväst", "Centrum", "Västra", "Nordost"]))
+    
+    if is_trend_query:
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        try:
+            # Extract target district
+            districts = ["Hisingen", "Sydväst", "Centrum", "Västra", "Nordost"]
+            target_district = None
+            for d in districts:
+                if d.lower() in ql:
+                    target_district = d
+                    break
+            
+            if target_district:
+                # Get historical student data
+                cur.execute(
+                    """
+                    SELECT chunk_text FROM school_embeddings 
+                    WHERE chunk_text ILIKE '%Year:%'
+                      AND chunk_text ILIKE '%District:%'
+                      AND chunk_text ILIKE '%Enrolled_Students:%';
+                    """
+                )
+                historical_text = "\n".join([row[0] for row in cur.fetchall()])
+                
+                # Get forecast data
+                cur.execute(
+                    """
+                    SELECT chunk_text FROM school_embeddings 
+                    WHERE chunk_text ILIKE '%Expected_Entrants%'
+                      AND chunk_text ILIKE '%District:%';
+                    """
+                )
+                forecast_text = "\n".join([row[0] for row in cur.fetchall()])
+                
+                # Parse historical data by year for target district
+                year_totals = {}  # {year: total_students}
+                for match in re.finditer(r'Year:\s*(\d+).*?District:\s*([^,\s]+).*?Enrolled_Students:\s*(\d+)', historical_text, re.DOTALL):
+                    year = int(match.group(1))
+                    district = match.group(2).rstrip(',').strip()
+                    enrolled = int(match.group(3))
+                    
+                    if district.lower() == target_district.lower():
+                        if year not in year_totals:
+                            year_totals[year] = 0
+                        year_totals[year] += enrolled
+                
+                # Parse forecast data
+                forecast_by_year = {}  # {year: expected_entrants}
+                for match in re.finditer(r'Year:\s*(\d+).*?District:\s*([^,\s]+).*?Expected_Entrants[^:]*:\s*(\d+)', forecast_text, re.DOTALL):
+                    year = int(match.group(1))
+                    district = match.group(2).rstrip(',').strip()
+                    entrants = int(match.group(3))
+                    
+                    if district.lower() == target_district.lower():
+                        forecast_by_year[year] = entrants
+                
+                if year_totals or forecast_by_year:
+                    # Build response
+                    historical_years = sorted(year_totals.keys())
+                    forecast_years = sorted(forecast_by_year.keys())
+                    
+                    doc_text = f"**Inskrivningstrend i {target_district}**\n\n"
+                    
+                    # Historical data
+                    if historical_years:
+                        doc_text += f"**Totalt elevantal per år ({historical_years[0]}–{historical_years[-1]}):**\n"
+                        for year in historical_years:
+                            doc_text += f"- {year}: {year_totals[year]} elever\n"
+                        
+                        # Calculate year-over-year changes
+                        if len(historical_years) >= 2:
+                            doc_text += f"\n**Årlig förändring:**\n"
+                            for i in range(1, len(historical_years)):
+                                prev_year = historical_years[i-1]
+                                curr_year = historical_years[i]
+                                change = year_totals[curr_year] - year_totals[prev_year]
+                                pct_change = (change / year_totals[prev_year]) * 100
+                                sign = "+" if change >= 0 else ""
+                                doc_text += f"- {prev_year}→{curr_year}: {sign}{change} elever ({sign}{pct_change:.1f}%)\n"
+                    
+                    # Forecast data
+                    if forecast_years:
+                        doc_text += f"\n**Prognos förväntade nya inskrivningar ({forecast_years[0]}–{forecast_years[-1]}):**\n"
+                        for year in forecast_years:
+                            doc_text += f"- {year}: {forecast_by_year[year]} nya elever (förskoleklass)\n"
+                    
+                    cur.close()
+                    conn.close()
+                    return [{
+                        "score": 1.0,
+                        "text": doc_text,
+                        "file": "aggregated_trend",
+                        "url": "aggregated_trend",
+                    }]
+            
+            cur.close()
+            conn.close()
+        except Exception as e:
+            logger.warning(f"Trend aggregation query failed: {e}")
+            cur.close()
+            conn.close()
+            pass
+    
+    # Check for district-specific student counts (after trend check)
     is_student_count_by_area = (("elevantal" in ql or "elever" in ql) and 
                                  any(d.lower() in ql for d in ["Hisingen", "Sydväst", "Centrum", "Västra", "Nordost"]))
     
