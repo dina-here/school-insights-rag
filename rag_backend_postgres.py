@@ -137,11 +137,12 @@ def embed_query(text: str) -> List[float]:
 def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
     """Retrieve relevant school analysis data from PostgreSQL using pgvector."""
     
-    # Special case: for "totalt antal" (total count) queries, fetch ALL chunks from relevant file
+    # Special case: for queries about total student counts, fetch ALL chunks from relevant files
     ql = query.lower()
-    is_total_count = ("totalt" in ql or "total" in ql) and ("antal" in ql or "count" in ql)
+    is_total_count = (("totalt" in ql or "total" in ql or "antal" in ql or "count" in ql) and 
+                      ("elever" in ql or "students" in ql or "elevantal" in ql))
     
-    if is_total_count and ("elever" in ql or "students" in ql):
+    if is_total_count:
         # For total student count queries, return ALL elever_students.csv chunks
         conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
