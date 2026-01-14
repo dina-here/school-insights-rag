@@ -252,6 +252,91 @@ def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
             conn.close()
             pass
     
+    # Check for maintenance cost / building condition queries
+    is_maintenance_query = any(keyword in ql for keyword in ["underhåll", "maintenance", "byggår", "renovera", "renover", "condition", "facility"])
+    
+    if is_maintenance_query:
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        try:
+            # Get all school data with maintenance costs and building year
+            cur.execute(
+                """
+                SELECT chunk_text FROM school_embeddings 
+                WHERE chunk_text ILIKE '%Maintenance_Cost%'
+                  AND chunk_text ILIKE '%Building_Year:%';
+                """
+            )
+            chunks = [row[0] for row in cur.fetchall()]
+            
+            if chunks:
+                all_text = "\n".join(chunks)
+                
+                # Parse school data: name, year, building_year, maintenance_cost
+                school_data = {}  # {school: {'year': year, 'building_year': bldg_yr, 'maintenance': cost}}
+                pattern = r'Year:\s*(\d+).*?School:\s*([Ss]kola_\d+).*?Building_Year:\s*(\d+).*?Maintenance_Cost_MSEK:\s*([\d.]+)'
+                
+                for match in re.finditer(pattern, all_text, re.DOTALL):
+                    year = int(match.group(1))
+                    school = match.group(2).rstrip(',').strip()
+                    building_year = int(match.group(3))
+                    maintenance = float(match.group(4))
+                    
+                    # Use latest year data for each school
+                    if school not in school_data or year > school_data[school]['year']:
+                        school_data[school] = {
+                            'year': year,
+                            'building_year': building_year,
+                            'maintenance': maintenance,
+                            'age': year - building_year
+                        }
+                
+                if school_data:
+                    # Sort by maintenance cost descending
+                    sorted_schools = sorted(school_data.items(), key=lambda x: x[1]['maintenance'], reverse=True)
+                    
+                    # Build response with top schools
+                    latest_year = max([s[1]['year'] for s in sorted_schools])
+                    doc_text = f"**Högst underhållskuld (senaste tillgängliga år: {latest_year})**\n"
+                    doc_text += f"*Antagande: Underhållskuld proxieras av hög årlig Maintenance_Cost_MSEK.*\n\n"
+                    doc_text += f"**Top 5 skolor:**\n"
+                    
+                    for i, (school, data) in enumerate(sorted_schools[:5], 1):
+                        doc_text += f"- **{school}** ({data['year']}): {data['maintenance']:.2f} MSEK**\n"
+                        doc_text += f"  - Byggår: {data['building_year']} (ålder: {data['age']} år)\n"
+                    
+                    # Analytics
+                    avg_maintenance = sum([s[1]['maintenance'] for s in sorted_schools]) / len(sorted_schools)
+                    avg_age = sum([s[1]['age'] for s in sorted_schools]) / len(sorted_schools)
+                    
+                    doc_text += f"\n**Analytiska observationer**\n"
+                    doc_text += f"- Äldre byggnader dominerar toppen — högre ackumulerad skuld.\n"
+                    doc_text += f"- Genomsnittlig underhållskostnad: {avg_maintenance:.2f} MSEK/år\n"
+                    doc_text += f"- Genomsnittlig byggnadsålder: {avg_age:.0f} år\n"
+                    
+                    # Find oldest buildings
+                    oldest = sorted(sorted_schools, key=lambda x: x[1]['building_year'])[:3]
+                    doc_text += f"\n**Äldsta byggnader:**\n"
+                    for school, data in oldest:
+                        doc_text += f"- {school}: byggår {data['building_year']} ({data['age']} år)\n"
+                    
+                    cur.close()
+                    conn.close()
+                    return [{
+                        "score": 1.0,
+                        "text": doc_text,
+                        "file": "aggregated_maintenance",
+                        "url": "aggregated_maintenance",
+                    }]
+            
+            cur.close()
+            conn.close()
+        except Exception as e:
+            logger.warning(f"Maintenance aggregation query failed: {e}")
+            cur.close()
+            conn.close()
+            pass
+    
     # Check for district-specific student counts (after trend check)
     is_student_count_by_area = (("elevantal" in ql or "elever" in ql) and 
                                  any(d.lower() in ql for d in ["Hisingen", "Sydväst", "Centrum", "Västra", "Nordost"]))
