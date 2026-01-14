@@ -137,6 +137,71 @@ def embed_query(text: str) -> List[float]:
 def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
     """Retrieve relevant school analysis data from PostgreSQL using pgvector."""
     
+    # Special case: for "totalt antal" (total count) queries, fetch ALL chunks from relevant file
+    ql = query.lower()
+    is_total_count = ("totalt" in ql or "total" in ql) and ("antal" in ql or "count" in ql)
+    
+    if is_total_count and ("elever" in ql or "students" in ql):
+        # For total student count queries, return ALL elever_students.csv chunks
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        try:
+            cur.execute("""
+                SELECT 
+                    id,
+                    chunk_text,
+                    source_file,
+                    start_row,
+                    end_row,
+                    1.0 as score
+                FROM school_embeddings
+                WHERE source_file = %s
+                ORDER BY start_row;
+            """, ("elever_students.csv",))
+            
+            results = cur.fetchall()
+            docs = []
+            for row in results:
+                docs.append({
+                    "score": row[5],
+                    "text": row[1],
+                    "file": row[2],
+                    "url": row[2],
+                })
+            
+            # Also include grundskoleforvaltning for district identification if area is mentioned
+            districts = ["Hisingen", "Sydväst", "Centrum", "Västra", "Nordost"]
+            if any(d.lower() in ql for d in districts):
+                cur.execute("""
+                    SELECT 
+                        id,
+                        chunk_text,
+                        source_file,
+                        start_row,
+                        end_row,
+                        1.0 as score
+                    FROM school_embeddings
+                    WHERE source_file = %s
+                    ORDER BY start_row;
+                """, ("grundskoleforvaltning_goteborg_syntetisk_data.csv",))
+                
+                grundskole_results = cur.fetchall()
+                for row in grundskole_results:
+                    docs.append({
+                        "score": row[5],
+                        "text": row[1],
+                        "file": row[2],
+                        "url": row[2],
+                    })
+            
+            cur.close()
+            conn.close()
+            return docs
+        except Exception:
+            cur.close()
+            conn.close()
+            pass
+    
     # First check if this is a district-level aggregation query
     aggregation = get_district_aggregation(query)
     if aggregation and "error" not in aggregation:
