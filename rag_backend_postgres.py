@@ -242,12 +242,20 @@ def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
                 if school_count > 0:
                     avg_per_school = total_students / school_count
                     schools_list = "\n".join([f"- {s}" for s in schools_with_data])
+                    
+                    # Add debug info about missing schools
+                    debug_info = ""
+                    if schools_missing_year:
+                        debug_info = "\n\n**DEBUG - Schools utan data för " + str(target_year) + ":**\n"
+                        debug_info += "\n".join([f"- {s}" for s in schools_missing_year])
+                    
                     doc_text = (
                         f"**Elevantal i {target_district} år {target_year}**\n"
                         f"- Antal skolor med data: {school_count}\n"
                         f"- Totalt elevantal: {total_students}\n"
                         f"- Genomsnitt per skola: {avg_per_school:.0f}\n\n"
                         f"**Skolans fördelning {target_year}:**\n{schools_list}"
+                        + debug_info
                     )
                     cur.close()
                     conn.close()
