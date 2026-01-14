@@ -15,4 +15,4 @@ B_Aggressive_Consolidation,2028,Close,Skola_01,Skola_07,Västra,3.41,118,0.43,Sy
 B_Aggressive_Consolidation,2028,Merge,Skola_20,Skola_07,Västra,7.13,25,0.81,Syntetisk scenario-plan för kapacitetsanpassning
 B_Aggressive_Consolidation,2029,Merge,Skola_05,Skola_16,Centrum,6.01,25,0.85,Syntetisk scenario-plan för kapacitetsanpassning
 B_Aggressive_Consolidation,2030,Close,Skola_14,Skola_12,Sydväst,1.94,59,0.47,Syntetisk scenario-plan för kapacitetsanpassning
-C_Baseline_NoChange,2026,None,-,-,-,0.0,0,0.0,Ingen strukturförändring (baseline)
+C_Baseline_NoChange,2026,,-,-,-,0.0,0,0.0,Ingen strukturförändring (baseline)
