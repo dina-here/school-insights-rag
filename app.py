@@ -196,30 +196,6 @@ def chat(req: ChatRequest):
     # Concatenate retrieved snippets - increased limit for complete data
     context = "\n\n".join(f"- {d['text']}" for d in docs)[:35000]
 
-    # Evidence gating: ensure required source files are present for the query intent
-    present_files = {d.get("file") for d in docs}
-    required_files = []
-    if ("ekonomi" in ql) or ("economy" in ql) or ("budget" in ql) or ("kostnad" in ql) or ("cost" in ql):
-        required_files.append("ekonomi_economy.csv")
-    if ("elever" in ql) or ("students" in ql) or ("enrolled" in ql) or ("student" in ql):
-        required_files.append("elever_students.csv")
-    if ("prognos" in ql) or ("forecast" in ql) or ("0-5" in ql) or ("0–5" in ql) or ("entrants" in ql):
-        required_files.append("prognosbarn_0_5_forecast.csv")
-    districts = ["Hisingen", "Sydväst", "Centrum", "Västra", "Nordost"]
-    if ("district" in ql) or ("område" in ql) or any(d.lower() in ql for d in districts):
-        required_files.append("grundskoleforvaltning_goteborg_syntetisk_data.csv")
-    missing_required = [f for f in required_files if f not in present_files]
-    sources_md = build_sources_markdown(docs)
-    if missing_required:
-        answer = (
-            "Underlaget är otillräckligt för ett säkert svar baserat på tillgänglig data. "
-            + "Saknade källor: "
-            + ", ".join(missing_required)
-            + ". Försök att specificera frågan ytterligare eller komplettera data."
-        )
-        answer_with_sources = answer.strip() + "\n\n" + sources_md
-        return ChatResponse(reply=answer_with_sources)
-
     # 2) Build instruction that includes:
     #    - the original system prompt from system_prompt.txt
     #    - the current retrieved school data snippets ("source data")
