@@ -385,7 +385,7 @@ def build_sources_markdown(docs: List[Dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-def save_chat_log(user_question: str, assistant_reply: str, source_files: str) -> None:
+def save_chat_log(user_question: str, assistant_reply: str, source_files: str, session_id: str = None) -> None:
     """Save chat interaction to PostgreSQL for analytics."""
     try:
         conn = psycopg2.connect(DATABASE_URL)
@@ -396,6 +396,7 @@ def save_chat_log(user_question: str, assistant_reply: str, source_files: str) -
             CREATE TABLE IF NOT EXISTS chat_logs (
                 id SERIAL PRIMARY KEY,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                session_id TEXT,
                 user_question TEXT NOT NULL,
                 assistant_reply TEXT NOT NULL,
                 source_files TEXT,
@@ -405,12 +406,45 @@ def save_chat_log(user_question: str, assistant_reply: str, source_files: str) -
         
         # Insert log entry
         cur.execute("""
-            INSERT INTO chat_logs (user_question, assistant_reply, source_files, reply_length)
-            VALUES (%s, %s, %s, %s);
-        """, (user_question, assistant_reply, source_files, len(assistant_reply)))
+            INSERT INTO chat_logs (session_id, user_question, assistant_reply, source_files, reply_length)
+            VALUES (%s, %s, %s, %s, %s);
+        """, (session_id, user_question, assistant_reply, source_files, len(assistant_reply)))
         
         conn.commit()
         cur.close()
         conn.close()
     except Exception as e:
         logger.error(f"Error saving chat log: {e}")
+
+
+def clear_chat_logs(before_date: str = None) -> dict:
+    """Clear chat logs. If before_date provided, only clear logs before that date.
+    
+    Args:
+        before_date: ISO format date string (YYYY-MM-DD). If None, clears all logs.
+    
+    Returns:
+        dict with deleted count
+    """
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        
+        if before_date:
+            cur.execute("""
+                DELETE FROM chat_logs 
+                WHERE created_at < %s::timestamp;
+            """, (before_date,))
+        else:
+            cur.execute("DELETE FROM chat_logs;")
+        
+        deleted_count = cur.rowcount
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        logger.info(f"Cleared {deleted_count} chat logs" + (f" before {before_date}" if before_date else ""))
+        return {"deleted": deleted_count, "before": before_date}
+    except Exception as e:
+        logger.error(f"Error clearing chat logs: {e}")
+        return {"error": str(e)}

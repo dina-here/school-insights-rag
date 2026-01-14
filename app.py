@@ -18,7 +18,9 @@ from google.genai import errors as genai_errors
 from openai import OpenAI
 
 # Use PostgreSQL backend instead of Pinecone
-from rag_backend_postgres import get_school_analysis, build_sources_markdown, save_chat_log
+from rag_backend_postgres import get_school_analysis, build_sources_markdown, save_chat_log, clear_chat_logs
+import uuid
+from datetime import datetime
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -81,6 +83,13 @@ class Message(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     history: List[Message] = []
+    session_id: str = None  # Client-provided session ID for tracking
+    
+    def get_session_id(self):
+        """Return existing session_id or generate new one"""
+        if not self.session_id:
+            self.session_id = str(uuid.uuid4())
+        return self.session_id
     
     @property
     def validated_message(self):
@@ -90,6 +99,33 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
+
+
+@app.delete("/chat/logs/clear")
+def clear_logs(key: str = None, before: str = None):
+    """Clear chat logs. Requires ADMIN_SECRET_KEY for security.
+    
+    Query parameters:
+    - key: Admin secret key (required)
+    - before: Optional ISO date (YYYY-MM-DD) to clear only logs before this date
+    
+    Examples:
+    - DELETE /chat/logs/clear?key=SECRET → clears all logs
+    - DELETE /chat/logs/clear?key=SECRET&before=2026-01-13 → clears logs before Jan 13
+    """
+    admin_key = os.getenv("ADMIN_SECRET_KEY")
+    
+    if not admin_key:
+        logger.error("ADMIN_SECRET_KEY not configured")
+        raise HTTPException(status_code=500, detail="Admin key not configured")
+    
+    if not key or key != admin_key:
+        logger.warning(f"Unauthorized log clear attempt with key: {key}")
+        raise HTTPException(status_code=403, detail="Invalid admin key")
+    
+    result = clear_chat_logs(before_date=before)
+    logger.info(f"Logs cleared: {result}")
+    return result
 
 
 @app.get("/")
@@ -289,10 +325,11 @@ def chat(req: ChatRequest):
     # 5) Append our own "Sources" footer
     answer_with_sources = answer.strip() + "\n\n" + sources_md
     
-    # 6) Save to chat logs for analytics
+    # 6) Save to chat logs for analytics (with session tracking)
     try:
         source_files = ",".join([d.get("file", "unknown") for d in docs])
-        save_chat_log(message, answer_with_sources, source_files)
+        session_id = req.get_session_id()
+        save_chat_log(message, answer_with_sources, source_files, session_id)
     except Exception as e:
         logger.warning(f"Failed to save chat log: {e}")
 
