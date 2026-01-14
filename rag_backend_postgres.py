@@ -162,13 +162,14 @@ def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
                     break
             
             # Extract year (look for 2023, 2024, 2025)
-            target_year = None
-            for year in [2025, 2024, 2023]:
+            # If not specified, default to latest year (2025) for queries like "just nu"
+            target_year = 2025  # Default to latest year
+            for year in [2025, 2024, 2023, 2022]:
                 if str(year) in ql:
                     target_year = year
                     break
             
-            if target_district and target_year:
+            if target_district:
                 # Get all chunks for this district and year
                 cur.execute(
                     """
