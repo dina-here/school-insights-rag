@@ -137,68 +137,84 @@ def embed_query(text: str) -> List[float]:
 def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
     """Retrieve relevant school analysis data from PostgreSQL using pgvector."""
     
-    # Special case: for queries about total student counts, fetch ALL chunks from relevant files
+    # Special case: for queries about student counts by area, compute aggregation directly
     ql = query.lower()
-    is_total_count = (("totalt" in ql or "total" in ql or "antal" in ql or "count" in ql) and 
-                      ("elever" in ql or "students" in ql or "elevantal" in ql))
+    is_student_count_by_area = (("elevantal" in ql or "elever" in ql) and 
+                                 any(d.lower() in ql for d in ["Hisingen", "Sydväst", "Centrum", "Västra", "Nordost"]))
     
-    if is_total_count:
-        # For total student count queries, return ALL elever_students.csv chunks
+    if is_student_count_by_area:
         conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
         try:
-            cur.execute("""
-                SELECT 
-                    id,
-                    chunk_text,
-                    source_file,
-                    start_row,
-                    end_row,
-                    1.0 as score
-                FROM school_embeddings
-                WHERE source_file = %s
-                ORDER BY start_row;
-            """, ("elever_students.csv",))
-            
-            results = cur.fetchall()
-            docs = []
-            for row in results:
-                docs.append({
-                    "score": row[5],
-                    "text": row[1],
-                    "file": row[2],
-                    "url": row[2],
-                })
-            
-            # Also include grundskoleforvaltning for district identification if area is mentioned
+            # Extract which area and year are asked about
             districts = ["Hisingen", "Sydväst", "Centrum", "Västra", "Nordost"]
-            if any(d.lower() in ql for d in districts):
+            target_district = None
+            for d in districts:
+                if d.lower() in ql:
+                    target_district = d
+                    break
+            
+            # Extract year (look for 2023, 2024, 2025)
+            target_year = None
+            for year in [2025, 2024, 2023]:
+                if str(year) in ql:
+                    target_year = year
+                    break
+            
+            if target_district and target_year:
+                # Query: sum all students for target district and year
                 cur.execute("""
                     SELECT 
-                        id,
-                        chunk_text,
-                        source_file,
-                        start_row,
-                        end_row,
-                        1.0 as score
-                    FROM school_embeddings
-                    WHERE source_file = %s
-                    ORDER BY start_row;
-                """, ("grundskoleforvaltning_goteborg_syntetisk_data.csv",))
+                        gsd.District,
+                        es.Year,
+                        COUNT(DISTINCT gsd.School) as school_count,
+                        SUM(es.Enrolled_Students) as total_students,
+                        AVG(es.Enrolled_Students) as avg_per_school
+                    FROM school_embeddings se_gsd
+                    JOIN school_embeddings se_es ON 1=1
+                    CROSS JOIN (
+                        SELECT 
+                            substring(chunk_text from 'School: (\w+)') as school,
+                            CAST(substring(chunk_text from 'Year: (\d+)') AS INT) as year,
+                            CAST(substring(chunk_text from 'Enrolled_Students: (\d+)') AS INT) as enrolled
+                        FROM school_embeddings
+                        WHERE source_file = 'elever_students.csv'
+                    ) es
+                    CROSS JOIN (
+                        SELECT 
+                            substring(chunk_text from 'School: (\w+)') as school,
+                            substring(chunk_text from 'District: (\w+)') as district
+                        FROM school_embeddings
+                        WHERE source_file = 'grundskoleforvaltning_goteborg_syntetisk_data.csv'
+                    ) gsd
+                    WHERE es.school = gsd.school
+                        AND gsd.district = %s
+                        AND es.year = %s
+                    GROUP BY gsd.District, es.Year;
+                """, (target_district, target_year))
                 
-                grundskole_results = cur.fetchall()
-                for row in grundskole_results:
-                    docs.append({
-                        "score": row[5],
-                        "text": row[1],
-                        "file": row[2],
-                        "url": row[2],
-                    })
+                result = cur.fetchone()
+                if result:
+                    district, year, school_count, total_students, avg_per_school = result
+                    doc_text = (
+                        f"**Elevantal i {district} år {year}**\n"
+                        f"- Antal skolor: {school_count}\n"
+                        f"- Totalt elevantal: {total_students}\n"
+                        f"- Genomsnitt per skola: {avg_per_school:.0f}"
+                    )
+                    cur.close()
+                    conn.close()
+                    return [{
+                        "score": 1.0,
+                        "text": doc_text,
+                        "file": "elever_students.csv",
+                        "url": "elever_students.csv",
+                    }]
             
             cur.close()
             conn.close()
-            return docs
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Aggregation query failed: {e}")
             cur.close()
             conn.close()
             pass
