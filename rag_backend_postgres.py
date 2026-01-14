@@ -383,3 +383,34 @@ def build_sources_markdown(docs: List[Dict[str, Any]]) -> str:
         lines.append(f"- ^{counter} [{file}]({url})")
         counter += 1
     return "\n".join(lines)
+
+
+def save_chat_log(user_question: str, assistant_reply: str, source_files: str) -> None:
+    """Save chat interaction to PostgreSQL for analytics."""
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        
+        # Create table if it doesn't exist
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS chat_logs (
+                id SERIAL PRIMARY KEY,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                user_question TEXT NOT NULL,
+                assistant_reply TEXT NOT NULL,
+                source_files TEXT,
+                reply_length INT
+            );
+        """)
+        
+        # Insert log entry
+        cur.execute("""
+            INSERT INTO chat_logs (user_question, assistant_reply, source_files, reply_length)
+            VALUES (%s, %s, %s, %s);
+        """, (user_question, assistant_reply, source_files, len(assistant_reply)))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        logger.error(f"Error saving chat log: {e}")

@@ -18,7 +18,7 @@ from google.genai import errors as genai_errors
 from openai import OpenAI
 
 # Use PostgreSQL backend instead of Pinecone
-from rag_backend_postgres import get_school_analysis, build_sources_markdown
+from rag_backend_postgres import get_school_analysis, build_sources_markdown, save_chat_log
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -288,5 +288,12 @@ def chat(req: ChatRequest):
     
     # 5) Append our own "Sources" footer
     answer_with_sources = answer.strip() + "\n\n" + sources_md
+    
+    # 6) Save to chat logs for analytics
+    try:
+        source_files = ",".join([d.get("file", "unknown") for d in docs])
+        save_chat_log(message, answer_with_sources, source_files)
+    except Exception as e:
+        logger.warning(f"Failed to save chat log: {e}")
 
     return ChatResponse(reply=answer_with_sources)
