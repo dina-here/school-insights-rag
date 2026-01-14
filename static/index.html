@@ -362,7 +362,7 @@
             const typingDiv = document.createElement('div');
             typingDiv.className = 'message assistant';
             typingDiv.innerHTML = `
-                <div class="message-avatar">SA</div>
+                <div class="message-avatar">SP</div>
                 <div class="typing-indicator active">
                     <span></span>
                     <span></span>
@@ -421,8 +421,8 @@
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${role}`;
             
-            const avatar = role === 'user' ? 'Du' : 'SA';
-            const avatarShort = role === 'user' ? 'Du' : 'SA';
+            const avatar = role === 'user' ? 'Du' : 'SP';
+            const avatarShort = role === 'user' ? 'Du' : 'SP';
             
             // Convert markdown-style links to HTML and preserve line breaks
             const formattedContent = content
