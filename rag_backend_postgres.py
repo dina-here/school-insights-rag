@@ -185,45 +185,59 @@ def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
                 
                 # Parse student data using regex on combined text
                 student_data = {}  # {school: {year: enrolled}}
-                # Match patterns like "School: Skola_19... Year: 2025... Enrolled_Students: 841"
-                for match in re.finditer(r'School:\s*([Ss]kola_\d+)[,\s]*Year:\s*(\d+)[,\s]*Enrolled_Students:\s*(\d+)', elever_text):
-                    school = match.group(1).rstrip(',').strip()
-                    year = int(match.group(2))
+                # CSV format: "Year: 2025, School: Skola_19, Enrolled_Students: 841, ..."
+                # Match the exact CSV field order: Year, School, Enrolled_Students
+                for match in re.finditer(r'Year:\s*(\d+)[^,]*School:\s*([Ss]kola_\d+)[^,]*Enrolled_Students:\s*(\d+)', elever_text):
+                    year = int(match.group(1))
+                    school = match.group(2).rstrip(',').strip()
                     enrolled = int(match.group(3))
                     if school not in student_data:
                         student_data[school] = {}
                     student_data[school][year] = enrolled
+                    logger.debug(f"Parsed: {school} {year} = {enrolled}")
                 
-                logger.info(f"Parsed {len(student_data)} schools from elever data: {sorted(student_data.keys())}")
+                logger.info(f"Parsed {len(student_data)} schools from elever data")
+                logger.info(f"All schools found: {sorted(student_data.keys())}")
+                logger.info(f"Skola_19 data: {student_data.get('Skola_19', 'NOT FOUND')}")
                 
                 # Parse school-to-district mapping
                 school_to_district = {}  # {school: district}
-                # Match patterns like "School: Skola_19... District: Hisingen"
-                for match in re.finditer(r'School:\s*([Ss]kola_\d+)[,\s]*District:\s*(\S+)', gsd_text):
+                # CSV format: "Year: 2025, School: Skola_19, District: Hisingen, ..."
+                # Match the exact CSV field order: Year (optional), School, District
+                for match in re.finditer(r'School:\s*([Ss]kola_\d+)[^,]*District:\s*(\S+)', gsd_text):
                     school = match.group(1).rstrip(',').strip()
                     district = match.group(2).rstrip(',').strip()
                     school_to_district[school] = district
+                    logger.debug(f"Parsed district: {school} -> {district}")
                 
-                logger.info(f"Parsed {len(school_to_district)} schools in GSD: {sorted(school_to_district.keys())}")
+                logger.info(f"Parsed {len(school_to_district)} schools in GSD")
+                logger.info(f"All GSD schools: {sorted(school_to_district.keys())}")
+                logger.info(f"Skola_19 district: {school_to_district.get('Skola_19', 'NOT FOUND')}")
                 
                 # Find all schools in target district
                 schools_in_district = sorted([s for s in school_to_district if school_to_district[s] == target_district])
-                logger.info(f"Schools in {target_district}: {schools_in_district}")
+                logger.info(f"Schools in {target_district}: {schools_in_district} ({len(schools_in_district)} total)")
                 
                 # Aggregate students for target year
                 total_students = 0
                 school_count = 0
                 schools_with_data = []
+                schools_missing_year = []
                 
                 for school in schools_in_district:
-                    if school in student_data and target_year in student_data[school]:
-                        enrolled = student_data[school][target_year]
-                        school_count += 1
-                        total_students += enrolled
-                        schools_with_data.append(f"{school}: {enrolled}")
-                        logger.info(f"Found {school} {target_year}: {enrolled} students")
+                    if school in student_data:
+                        if target_year in student_data[school]:
+                            enrolled = student_data[school][target_year]
+                            school_count += 1
+                            total_students += enrolled
+                            schools_with_data.append(f"{school}: {enrolled}")
+                            logger.info(f"✓ Found {school} {target_year}: {enrolled} students")
+                        else:
+                            schools_missing_year.append(f"{school} (has years: {list(student_data[school].keys())})")
+                            logger.warning(f"✗ {school} missing year {target_year}, has: {list(student_data[school].keys())}")
                     else:
-                        logger.warning(f"Missing data for {school} {target_year}: student_data has {list(student_data.get(school, {}).keys())}")
+                        schools_missing_year.append(f"{school} (no data)")
+                        logger.error(f"✗ {school} NOT in student_data at all!")
                 
                 if school_count > 0:
                     avg_per_school = total_students / school_count
