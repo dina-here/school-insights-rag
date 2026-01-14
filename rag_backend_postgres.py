@@ -186,8 +186,8 @@ def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
                 # Parse student data using regex on combined text
                 student_data = {}  # {school: {year: enrolled}}
                 # CSV format: "Year: 2025, School: Skola_19, Enrolled_Students: 841, ..."
-                # Match the exact CSV field order: Year, School, Enrolled_Students
-                for match in re.finditer(r'Year:\s*(\d+)[^,]*School:\s*([Ss]kola_\d+)[^,]*Enrolled_Students:\s*(\d+)', elever_text):
+                # Use DOTALL flag to match across newlines
+                for match in re.finditer(r'Year:\s*(\d+).*?School:\s*([Ss]kola_\d+).*?Enrolled_Students:\s*(\d+)', elever_text, re.DOTALL):
                     year = int(match.group(1))
                     school = match.group(2).rstrip(',').strip()
                     enrolled = int(match.group(3))
@@ -203,8 +203,8 @@ def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
                 # Parse school-to-district mapping
                 school_to_district = {}  # {school: district}
                 # CSV format: "Year: 2025, School: Skola_19, District: Hisingen, ..."
-                # Match the exact CSV field order: Year (optional), School, District
-                for match in re.finditer(r'School:\s*([Ss]kola_\d+)[^,]*District:\s*(\S+)', gsd_text):
+                # Use DOTALL flag to match across newlines
+                for match in re.finditer(r'School:\s*([Ss]kola_\d+).*?District:\s*(\S+)', gsd_text, re.DOTALL):
                     school = match.group(1).rstrip(',').strip()
                     district = match.group(2).rstrip(',').strip()
                     school_to_district[school] = district
