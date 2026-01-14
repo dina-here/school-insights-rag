@@ -145,80 +145,7 @@ def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
     # Special case: for queries about student counts by area, compute aggregation directly
     ql = query.lower()
     
-    # Check for total/all schools count (no specific district)
-    is_total_student_count = (("elevantal" in ql or "elever" in ql) and 
-                              ("totalt" in ql or "alla" in ql or "sammanlagt" in ql or "tillsammans" in ql))
-    
-    if is_total_student_count:
-        conn = psycopg2.connect(DATABASE_URL)
-        cur = conn.cursor()
-        try:
-            # Get all student chunks regardless of district
-            cur.execute(
-                """
-                SELECT chunk_text FROM school_embeddings 
-                WHERE chunk_text ILIKE '%Year:%'
-                  AND chunk_text ILIKE '%School:%'
-                  AND chunk_text ILIKE '%Enrolled_Students:%';
-                """
-            )
-            elever_text = "\n".join([row[0] for row in cur.fetchall()])
-            
-            # Parse student data using regex
-            student_data = {}  # {school: {year: enrolled}}
-            for match in re.finditer(r'Year:\s*(\d+).*?School:\s*([Ss]kola_\d+).*?Enrolled_Students:\s*(\d+)', elever_text, re.DOTALL):
-                year = int(match.group(1))
-                school = match.group(2).rstrip(',').strip()
-                enrolled = int(match.group(3))
-                if school not in student_data:
-                    student_data[school] = {}
-                student_data[school][year] = enrolled
-            
-            # Extract target year (look for 2023, 2024, 2025, default to 2025)
-            target_year = 2025
-            for year in [2025, 2024, 2023, 2022]:
-                if str(year) in ql:
-                    target_year = year
-                    break
-            
-            # Aggregate all schools for target year
-            total_students = 0
-            school_count = 0
-            schools_with_data = []
-            
-            for school in sorted(student_data.keys()):
-                if target_year in student_data[school]:
-                    enrolled = student_data[school][target_year]
-                    school_count += 1
-                    total_students += enrolled
-                    schools_with_data.append(f"{school}: {enrolled}")
-            
-            if school_count > 0:
-                avg_per_school = total_students / school_count
-                schools_list = "\n".join([f"- {s}" for s in schools_with_data])
-                
-                doc_text = (
-                    f"**Totalt antal elever år {target_year}**\n"
-                    f"- Antal skolor: {school_count}\n"
-                    f"- Totalt elevantal: {total_students}\n"
-                    f"- Genomsnitt per skola: {avg_per_school:.0f}\n\n"
-                    f"**Skolors fördelning {target_year}:**\n{schools_list}"
-                )
-                cur.close()
-                conn.close()
-                return [{
-                    "score": 1.0,
-                    "text": doc_text,
-                    "file": "aggregated_students",
-                    "url": "aggregated_students",
-                }]
-        except Exception as e:
-            logger.warning(f"Total aggregation query failed: {e}")
-        finally:
-            cur.close()
-            conn.close()
-    
-    # Check for district-specific student counts
+    # Check for district-specific student counts first (higher priority than total)
     is_student_count_by_area = (("elevantal" in ql or "elever" in ql) and 
                                  any(d.lower() in ql for d in ["Hisingen", "Sydväst", "Centrum", "Västra", "Nordost"]))
     
@@ -355,6 +282,80 @@ def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
             cur.close()
             conn.close()
             pass
+    
+    # Check for total/all schools count (no specific district) - only if district check didn't match
+    is_total_student_count = (("elevantal" in ql or "elever" in ql) and 
+                              ("totalt" in ql or "alla" in ql or "sammanlagt" in ql or "tillsammans" in ql) and
+                              not any(d.lower() in ql for d in ["Hisingen", "Sydväst", "Centrum", "Västra", "Nordost"]))
+    
+    if is_total_student_count:
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        try:
+            # Get all student chunks regardless of district
+            cur.execute(
+                """
+                SELECT chunk_text FROM school_embeddings 
+                WHERE chunk_text ILIKE '%Year:%'
+                  AND chunk_text ILIKE '%School:%'
+                  AND chunk_text ILIKE '%Enrolled_Students:%';
+                """
+            )
+            elever_text = "\n".join([row[0] for row in cur.fetchall()])
+            
+            # Parse student data using regex
+            student_data = {}  # {school: {year: enrolled}}
+            for match in re.finditer(r'Year:\s*(\d+).*?School:\s*([Ss]kola_\d+).*?Enrolled_Students:\s*(\d+)', elever_text, re.DOTALL):
+                year = int(match.group(1))
+                school = match.group(2).rstrip(',').strip()
+                enrolled = int(match.group(3))
+                if school not in student_data:
+                    student_data[school] = {}
+                student_data[school][year] = enrolled
+            
+            # Extract target year (look for 2023, 2024, 2025, default to 2025)
+            target_year = 2025
+            for year in [2025, 2024, 2023, 2022]:
+                if str(year) in ql:
+                    target_year = year
+                    break
+            
+            # Aggregate all schools for target year
+            total_students = 0
+            school_count = 0
+            schools_with_data = []
+            
+            for school in sorted(student_data.keys()):
+                if target_year in student_data[school]:
+                    enrolled = student_data[school][target_year]
+                    school_count += 1
+                    total_students += enrolled
+                    schools_with_data.append(f"{school}: {enrolled}")
+            
+            if school_count > 0:
+                avg_per_school = total_students / school_count
+                schools_list = "\n".join([f"- {s}" for s in schools_with_data])
+                
+                doc_text = (
+                    f"**Totalt antal elever år {target_year}**\n"
+                    f"- Antal skolor: {school_count}\n"
+                    f"- Totalt elevantal: {total_students}\n"
+                    f"- Genomsnitt per skola: {avg_per_school:.0f}\n\n"
+                    f"**Skolors fördelning {target_year}:**\n{schools_list}"
+                )
+                cur.close()
+                conn.close()
+                return [{
+                    "score": 1.0,
+                    "text": doc_text,
+                    "file": "aggregated_students",
+                    "url": "aggregated_students",
+                }]
+        except Exception as e:
+            logger.warning(f"Total aggregation query failed: {e}")
+        finally:
+            cur.close()
+            conn.close()
     
     # First check if this is a district-level aggregation query
     aggregation = get_district_aggregation(query)
