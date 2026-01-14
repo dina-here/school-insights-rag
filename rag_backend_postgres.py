@@ -2,6 +2,7 @@
 import os
 import re
 import json
+import logging
 from typing import List, Dict, Any
 
 from dotenv import load_dotenv
@@ -9,6 +10,10 @@ from google import genai
 from openai import OpenAI
 import psycopg2
 from psycopg2.extras import execute_values
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -163,77 +168,72 @@ def get_school_analysis(query: str, top_k: int = 5) -> List[Dict[str, Any]]:
             
             if target_district and target_year:
                 # Get all chunks for this district and year
-                # Query elever_students.csv for year, then grundskoleforvaltning for district match
                 cur.execute(
                     "SELECT chunk_text FROM school_embeddings WHERE source_file = %s;",
                     ("elever_students.csv",)
                 )
-                elever_chunks = [row[0] for row in cur.fetchall()]
+                elever_text = "\n".join([row[0] for row in cur.fetchall()])
                 
                 cur.execute(
                     "SELECT chunk_text FROM school_embeddings WHERE source_file = %s;",
                     ("grundskoleforvaltning_goteborg_syntetisk_data.csv",)
                 )
-                gsd_chunks = [row[0] for row in cur.fetchall()]
+                gsd_text = "\n".join([row[0] for row in cur.fetchall()])
                 
-                # Parse student data by school/year
-                import re
-                student_data = {}  # school -> { year -> enrolled }
-                for chunk in elever_chunks:
-                    # Find all Year: and Enrolled_Students: pairs with School
-                    lines = chunk.split('\n')
-                    current_school = None
-                    for line in lines:
-                        if 'School:' in line:
-                            m = re.search(r'School:\s*(\S+)', line)
-                            if m:
-                                current_school = m.group(1).rstrip(',')
-                        elif 'Year:' in line and current_school:
-                            m = re.search(r'Year:\s*(\d+)', line)
-                            year = int(m.group(1)) if m else None
-                            # Look for Enrolled_Students in same or next few lines
-                            for enrolled_line in chunk.split('\n')[chunk.split('\n').index(line):]:
-                                if 'Enrolled_Students:' in enrolled_line:
-                                    m = re.search(r'Enrolled_Students:\s*(\d+)', enrolled_line)
-                                    enrolled = int(m.group(1)) if m else 0
-                                    if year not in student_data:
-                                        student_data[current_school] = {}
-                                    student_data[current_school][year] = enrolled
-                                    break
+                logger.info(f"Total elever chunks: {len(elever_text)} chars")
+                logger.info(f"Total GSD chunks: {len(gsd_text)} chars")
                 
-                # Parse district data
-                school_to_district = {}  # school -> district
-                for chunk in gsd_chunks:
-                    lines = chunk.split('\n')
-                    current_school = None
-                    for line in lines:
-                        if 'School:' in line:
-                            m = re.search(r'School:\s*(\S+)', line)
-                            if m:
-                                current_school = m.group(1).rstrip(',')
-                        elif 'District:' in line and current_school:
-                            m = re.search(r'District:\s*(\S+)', line)
-                            district = m.group(1).rstrip(',') if m else None
-                            if district:
-                                school_to_district[current_school] = district
+                # Parse student data using regex on combined text
+                student_data = {}  # {school: {year: enrolled}}
+                # Match patterns like "School: Skola_19... Year: 2025... Enrolled_Students: 841"
+                for match in re.finditer(r'School:\s*([Ss]kola_\d+)[,\s]*Year:\s*(\d+)[,\s]*Enrolled_Students:\s*(\d+)', elever_text):
+                    school = match.group(1).rstrip(',').strip()
+                    year = int(match.group(2))
+                    enrolled = int(match.group(3))
+                    if school not in student_data:
+                        student_data[school] = {}
+                    student_data[school][year] = enrolled
                 
-                # Aggregate for target district and year
-                schools_in_district = [s for s, d in school_to_district.items() if d == target_district]
+                logger.info(f"Parsed {len(student_data)} schools from elever data: {sorted(student_data.keys())}")
+                
+                # Parse school-to-district mapping
+                school_to_district = {}  # {school: district}
+                # Match patterns like "School: Skola_19... District: Hisingen"
+                for match in re.finditer(r'School:\s*([Ss]kola_\d+)[,\s]*District:\s*(\S+)', gsd_text):
+                    school = match.group(1).rstrip(',').strip()
+                    district = match.group(2).rstrip(',').strip()
+                    school_to_district[school] = district
+                
+                logger.info(f"Parsed {len(school_to_district)} schools in GSD: {sorted(school_to_district.keys())}")
+                
+                # Find all schools in target district
+                schools_in_district = sorted([s for s in school_to_district if school_to_district[s] == target_district])
+                logger.info(f"Schools in {target_district}: {schools_in_district}")
+                
+                # Aggregate students for target year
                 total_students = 0
                 school_count = 0
+                schools_with_data = []
                 
                 for school in schools_in_district:
                     if school in student_data and target_year in student_data[school]:
+                        enrolled = student_data[school][target_year]
                         school_count += 1
-                        total_students += student_data[school][target_year]
+                        total_students += enrolled
+                        schools_with_data.append(f"{school}: {enrolled}")
+                        logger.info(f"Found {school} {target_year}: {enrolled} students")
+                    else:
+                        logger.warning(f"Missing data for {school} {target_year}: student_data has {list(student_data.get(school, {}).keys())}")
                 
                 if school_count > 0:
                     avg_per_school = total_students / school_count
+                    schools_list = "\n".join([f"- {s}" for s in schools_with_data])
                     doc_text = (
                         f"**Elevantal i {target_district} år {target_year}**\n"
                         f"- Antal skolor med data: {school_count}\n"
                         f"- Totalt elevantal: {total_students}\n"
-                        f"- Genomsnitt per skola: {avg_per_school:.0f}"
+                        f"- Genomsnitt per skola: {avg_per_school:.0f}\n\n"
+                        f"**Skolans fördelning {target_year}:**\n{schools_list}"
                     )
                     cur.close()
                     conn.close()
