@@ -145,17 +145,48 @@ def embed_text(text: str) -> List[float]:
 
 
 def load_csv_file(filepath: str) -> List[Dict[str, Any]]:
-    """Load a CSV file and return rows as dictionaries."""
+    """Load a CSV file with auto-detection of delimiter and encoding.
+    
+    Supports both ',' and ';' delimiters and multiple character encodings
+    (UTF-8 with/without BOM, Latin-1, Windows-1252).
+    """
     rows = []
-    try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                rows.append(row)
-        logger.info(f"Loaded {len(rows)} rows from {filepath}")
-    except Exception as e:
-        logger.error(f"Error loading CSV {filepath}: {e}")
-        raise
+    encodings = ['utf-8-sig', 'utf-8', 'iso-8859-1', 'cp1252', 'latin-1']
+    
+    for encoding in encodings:
+        try:
+            with open(filepath, 'r', encoding=encoding) as f:
+                # Read first line to detect delimiter
+                first_line = f.readline()
+                if not first_line:
+                    logger.warning(f"Empty file: {filepath}")
+                    return []
+                
+                # Detect delimiter: semicolon has priority if present
+                detected_delimiter = ';' if ';' in first_line else ','
+                
+                # Reset file pointer and parse with detected delimiter
+                f.seek(0)
+                reader = csv.DictReader(f, delimiter=detected_delimiter)
+                for row in reader:
+                    if any(row.values()):  # Skip empty rows
+                        rows.append(row)
+                
+                logger.info(f"Loaded {len(rows)} rows from {filepath} "
+                           f"(encoding={encoding}, delimiter='{detected_delimiter}')")
+                return rows
+                
+        except UnicodeDecodeError as e:
+            logger.debug(f"Encoding '{encoding}' failed for {filepath}: {e}")
+            continue
+        except Exception as e:
+            logger.debug(f"Error with encoding '{encoding}' for {filepath}: {e}")
+            continue
+    
+    # If all encodings failed
+    logger.error(f"Could not load {filepath} with any supported encoding. Tried: {encodings}")
+    raise ValueError(f"Failed to load {filepath}. File may have unsupported encoding.")
+    
     return rows
 
 
