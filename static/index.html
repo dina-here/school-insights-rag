@@ -39,6 +39,7 @@
             color: white;
             padding: 24px;
             text-align: center;
+            position: relative;
         }
 
         .header h1 {
@@ -50,6 +51,37 @@
         .header p {
             font-size: 14px;
             opacity: 0.9;
+        }
+
+        .header-actions {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .action-btn {
+            background: #ffffff;
+            border: none;
+            color: #0077bc;
+            padding: 10px 18px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, color 0.15s ease;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+            background: #e8f4fb;
+        }
+
+        .action-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
         }
 
         .chat-container {
@@ -291,12 +323,16 @@
         <div class="header">
             <h1>📚 SkolPulsen</h1>
             <p>AI-stödd analys och prognos för skolförvaltning</p>
+            <div class="header-actions">
+                <button class="action-btn" onclick="resetSession()">🔄 Ny session</button>
+                <button class="action-btn" onclick="downloadSession()">💾 Ladda ner</button>
+            </div>
         </div>
 
         <div class="chat-container" id="chatContainer">
             <div class="welcome-message">
                 <h2>👋 Välkommen till SkolPulsen!</h2>
-                <p>Jag analyserar skoldata för att ge insikter om elevantal, kapacitet och resurser.<br>Testa att ställa en av dessa frågor:</p>
+                <p>Jag analyserar samlad skoldata och ger AI-baserade insikter och prognoser om elevantal, kapacitet och resurser.</p>
                 <div class="example-questions">
                     <button class="example-btn" onclick="askQuestion('Hur ser inskrivningstrenden ut i Centrum?')">
                         Hur ser inskrivningstrenden ut i Centrum?
@@ -328,6 +364,67 @@
         let chatHistory = [];
         const chatContainer = document.getElementById('chatContainer');
         const userInput = document.getElementById('userInput');
+
+        function resetSession() {
+            chatHistory = [];
+            chatContainer.innerHTML = `
+                <div class="welcome-message">
+                    <h2>👋 Välkommen till SkolPulsen!</h2>
+                    <p>Jag analyserar samlad skoldata och ger AI-baserade insikter och prognoser om elevantal, kapacitet och resurser.</p>
+                    <div class="example-questions">
+                        <button class="example-btn" onclick="askQuestion('Hur ser inskrivningstrenden ut i Centrum?')">
+                            Hur ser inskrivningstrenden ut i Centrum?
+                        </button>
+                        <button class="example-btn" onclick="askQuestion('Vilka skolor har högst underhållsskuld?')">
+                            Vilka skolor har högst underhållsskuld?
+                        </button>
+                        <button class="example-btn" onclick="askQuestion('Hur många elever finns det totalt?')">
+                            Hur många elever finns det totalt?
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function downloadSession() {
+            if (chatHistory.length === 0) {
+                alert('Ingen session att ladda ner ännu. Ställ några frågor först!');
+                return;
+            }
+
+            const pairs = [];
+            for (let i = 0; i < chatHistory.length; i++) {
+                const entry = chatHistory[i];
+                if (entry.role === 'user') {
+                    let answer = null;
+                    for (let j = i + 1; j < chatHistory.length; j++) {
+                        if (chatHistory[j].role === 'model') {
+                            answer = chatHistory[j].content;
+                            break;
+                        }
+                    }
+                    if (answer) {
+                        pairs.push({ question: entry.content, answer });
+                    }
+                }
+            }
+
+            if (pairs.length === 0) {
+                alert('Hittade inga frågor/svar att ladda ner ännu.');
+                return;
+            }
+
+            const txtLines = pairs.map((p, i) => `Fråga ${i + 1}:\n${p.question}\n\nSvar ${i + 1}:\n${p.answer}`);
+            const txtContent = txtLines.join('\n\n' + '='.repeat(60) + '\n\n');
+
+            const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `skolpulsen_session_${new Date().toISOString().slice(0, 10)}.txt`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
         const sendBtn = document.getElementById('sendBtn');
 
         function handleKeyPress(event) {

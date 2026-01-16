@@ -1,0 +1,373 @@
+id,session_id,created_at,user_question,assistant_reply,source_files,reply_length
+73,2026-01-16 09:54:44.059193,33d2eae0-1e1a-4699-8ac6-a54c4844d232,Vad är trenden framåt?,"**Framåtblickande trend – Hisingen**
+
+**Demografisk prognos (nya elever, F‑klass):**
+- **2028:** 509  
+- **2029:** 498 (**−2,2 %**)  
+- **2030:** 551 (**+10,6 %**)  
+- **2031:** 540 (**−2,0 %**)  
+- **2032:** 516 (**−4,4 %**)  
+
+**Beräkningar:**
+- **Snitt 2028–2032:** (509+498+551+540+516)/5 = **523 elever/år**
+- **Volatilitet:** max–min = 551–498 = **53 elever (±10 %)**
+- **Nettoförändring 2028→2032:** +7 elever (**+1,4 %**)
+
+**Tolkning:**
+- **Stabilisering efter nedgång 2022–2025**
+- **Tillfällig topp runt 2030**, därefter svag avmattning
+- Ingen långsiktig stark tillväxt indikerad
+
+**Implikationer för skolorna:**
+- **Kapacitet:** nuvarande lokaler räcker, ingen expansion behövs
+- **Bemanning:** flexibel planering runt 2029–2031
+- **Resurser:** prioritera kvalitet/effektivisering framför volymökning
+
+**Antagande:**
+- Prognosen baseras på förväntade nya elever (F‑klass) i Hisingen.
+
+Källor:
+- ^1 [grundskoleforvaltning_goteborg_syntetisk_data.csv](grundskoleforvaltning_goteborg_syntetisk_data.csv)
+- ^2 [prognos.csv](prognos.csv)","grundskoleforvaltning_goteborg_syntetisk_data.csv,prognos.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,prognos.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,prognos.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,prognos.csv,prognos.csv,prognos.csv,prognos.csv,prognos.csv",1044
+72,2026-01-16 09:53:36.374039,83f669d4-7ac0-4f04-bd6b-139ac4137ee9,Vad var det för historiska trender?,"**Historiska elevtrender – Hisingen (baserat på tillgängliga skolor 2022–2025)**
+
+**Totalt elevantal per år (samma skolor):**
+- **2022:** 2 701 elever  
+- **2023:** 2 511 elever  
+- **2024:** 2 494 elever  
+- **2025:** 2 356 elever  
+
+**Beräkning:**
+- Summering av *Enrolled_Students* för Hisingen-skolor med data varje år
+
+**Trendanalys:**
+- **Total förändring 2022–2025:** −345 elever (**−12,8 %**)  
+- **Genomsnittlig årlig förändring:** ca **−4,5 % per år**
+- **Tydlig nedåtgående trend** i elevantalet
+
+**Skolvisa mönster (exempel):**
+- **Skola_15:** 679 → 553 (**−18,6 %**)  
+- **Skola_25:** 574 → 606 (topp 2024, sedan ned)  
+- **Skola_14:** 681 → 644 (**−5,4 %**)  
+- **Skola_18:** 767 → 542 (**−29,3 %**, kraftig minskning)
+
+**Tolkning:**
+- Minskande elevkullar över flera skolor
+- Tillfälliga uppgångar 2023–2024 men ingen varaktig återhämtning
+- Indikerar **överkapacitet på sikt** om trenden fortsätter
+
+**Strategiska implikationer:**
+- Anpassa kapacitet och bemanning nedåt
+- Samordna klasser/årskurser mellan närliggande skolor
+- Undvik nybyggnation – fokus på effektivisering 2026–2030
+
+Källor:
+- ^1 [prognos.csv](prognos.csv)
+- ^2 [grundskoleforvaltning_goteborg_syntetisk_data.csv](grundskoleforvaltning_goteborg_syntetisk_data.csv)","prognos.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,prognos.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,prognos.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,prognos.csv,prognos.csv,prognos.csv,prognos.csv,prognos.csv",1249
+71,2026-01-16 09:50:57.148089,be031742-fa51-4cb8-af25-d341131873e4,Hur många elever totalt finns det i skolorna på Hisingen just nu?,"- **Senast tillgängliga år:** 2025  
+- **Antal skolor med data:** 8  
+- **Totalt elevantal:** **4 863 elever**
+
+**Beräkning (summa per skola 2025):**
+- Skola_02: 757  
+- Skola_03: 662  
+- Skola_14: 644  
+- Skola_15: 553  
+- Skola_18: 542  
+- Skola_19: 464  
+- Skola_25: 606  
+- Skola_26: 635  
+- **Summa:** 757+662+644+553+542+464+606+635 = **4 863**
+
+- **Genomsnitt per skola:** 4 863 / 8 = **608 elever**
+
+Källor:
+- ^1 [aggregated_students](aggregated_students)",aggregated_students,463
+70,2026-01-16 09:34:50.232684,5083afbd-6fdd-4a8c-b3a0-d23372315cdc,Planeringsrekomendationer för Hisingen,"**Planeringsrekommendationer – Hisingen (databaserad analys)**
+
+**1) Elevutveckling och efterfrågan**
+- Prognos F‑klass Hisingen 2026–2033: 566→499 (−1,6 % årlig trend)
+- Toppår 2030: 551 elever, därefter nedgång
+- Antagande: svagt fallande elevkullar efter 2030
+
+**2) Kapacitetsutnyttjande 2025 (urval)**
+- Skola_02: 757/776 = **97,6 %** (nära fullt)
+- Skola_03: 662/853 = **77,6 %**
+- Skola_14: 644/825 = **78,1 %**
+- Skola_18: 542/874 = **62,0 %**
+- Skola_15: 553/767 = **72,1 %**
+- Skola_25: 606/693 = **87,4 %**
+- Skola_26: 635/729 = **87,1 %**
+
+**3) Identifierade obalanser**
+- Överbelastning: Skola_02 (akut marginal <20 platser)
+- Ledig kapacitet: Skola_18 (~330 platser), Skola_03 (~190)
+- Ojämn beläggning trots samma stadsdel
+
+**4) Personal och resurseffektivitet**
+- Elev–lärare 2025 varierar: 14,3–17,9
+- Skola_02: 17,2 → risk arbetsbelastning vid fortsatt tryck
+- Skola_18: 14,3 → möjlighet ta fler elever utan nyrekrytering
+
+**5) Ekonomi**
+- Driftkostnad/elev 2025:
+  - Skola_02: 92,07/757 ≈ **0,122 MSEK**
+  - Skola_18: 62,11/542 ≈ **0,115 MSEK**
+- Hög beläggning korrelerar med högre kostnad per elev
+
+**6) Rekommenderade åtgärder (2026–2030)**
+- Omfördela upptagningsområden från Skola_02 → Skola_18/03
+- Undvik nybyggnation före 2030 (fallande prognos)
+- Prioritera flexibla paviljonger istället för permanenta lokaler
+- Anpassa lärartjänster: −3–5 FTE i underutnyttjade skolor
+- Planera sammanslagning av klasser vid <70 % beläggning
+- Rikta integrationsstöd: flera skolor >45 % utländsk bakgrund
+
+**7) Strategisk slutsats**
+- Hisingen har **tillräcklig total kapacitet**
+- Utmaningen är **felplacerad efterfrågan**, inte platsbrist
+- Fokus bör ligga på styrning, inte expansion
+
+Källor:
+- ^1 [prognos.csv](prognos.csv)
+- ^2 [grundskoleforvaltning_goteborg_syntetisk_data.csv](grundskoleforvaltning_goteborg_syntetisk_data.csv)","prognos.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,prognos.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,prognos.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,prognos.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,prognos.csv,prognos.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,prognos.csv,prognos.csv",1847
+69,2026-01-16 09:32:30.149227,e3170336-afed-4923-a8eb-9a053f9a31bd,Genomsnittligt elevantal på Hisingen - historik och prognos i tabellform,"Nedan är **genomsnittligt elevantal på Hisingen i tabellform**, baserat på **tillgänglig historik (2022–2025)** och **prognos (2026–2030)**.
+
+**Antaganden**
+- Antal skolor konstant: **8**
+- Prognos 2026–2030 baseras på **förväntade nybörjare (F)** i datan
+
+---
+
+### Genomsnittligt elevantal per skola – Hisingen
+
+| År | Totalt elevantal | Antal skolor | Genomsnitt/skola | Förändring YoY |
+|----|------------------|--------------|------------------|----------------|
+| 2022 | 5 035 | 8 | **629** | – |
+| 2023 | 4 933 | 8 | **617** | −1,9 % |
+| 2024 | 5 028 | 8 | **629** | +1,9 % |
+| 2025 | 4 863 | 8 | **608** | −3,3 % |
+| 2026* | 4 528 | 8 | **566** | −6,9 % |
+| 2027* | 4 568 | 8 | **571** | +0,9 % |
+| 2028* | 4 072 | 8 | **509** | −10,9 % |
+| 2029* | 3 984 | 8 | **498** | −2,2 % |
+| 2030* | 4 408 | 8 | **551** | +10,6 % |
+
+\* Prognosår
+
+---
+
+### Sammanfattande analys
+- **Historisk trend 2022–2025:** −1,1 % årlig minskning (CAGR)
+- **Prognosnivå 2026–2030:** Snitt **≈540 elever/skola**
+- **Förändring 2025→2030:** −11,2 %
+- **Implikation:** Ökande **kapacitetsöverskott**, särskilt i större skolor
+
+Vill du ha:
+- tabell per **enskild skola**
+- **kapacitetsutnyttjande (%)** kopplat till lokaler
+- utökning till **2031–2033** (kräver prognosdata)
+
+Källor:
+- ^1 [aggregated_students](aggregated_students)",aggregated_students,1311
+68,2026-01-16 09:31:44.705173,f6590905-7507-4991-8fe1-1d16d0960e09,Genomsnittligt elevantal på Hisingen - historik och prognos 2022-2033,"Här är **analys baserad på tillgänglig data** för **Hisingen**.  
+*(Endast 2022 finns i underlaget; övriga år saknar numeriska värden.)*
+
+---
+
+## Historik – genomsnittligt elevantal per skola
+
+### 2022
+- **Antal skolor:** 8  
+- **Totalt elevantal:** 5 523  
+- **Genomsnitt/skola:** 5 523 / 8 = **690 elever**
+
+**Fördelning 2022 (kontroll):**
+- Spann: **574–890 elever**
+- Avvikelse mot snitt: upp till **+200 elever**
+
+---
+
+## 2023–2025 (historik)
+- **Data saknas:** Totalt elevantal per år behövs
+- **Konsekvens:** Ingen tillväxttakt kan beräknas
+
+---
+
+## Prognos 2026–2033
+- **Data saknas:** Prognostiserat elevantal per år
+- **Konsekvens:** Prognos 2026–2033 kan inte beräknas
+
+---
+
+## Vad som krävs för komplett analys 2022–2033
+- Totalt elevantal per år **2023–2025**
+- Prognostiserat elevantal per år **2026–2033**
+- Bekräftat antal skolor per år (antagande annars konstant = 8)
+
+---
+
+## Snabb strategisk insikt (baserat på 2022)
+- **Högt snitt (690)** indikerar stora skolenheter
+- **Kapacitetsrisk** i skolor >750 elever
+- **Prioritet:** Följ elevutveckling innan investeringar
+
+När du delar siffrorna för **2023–2033** räknar jag direkt:
+- årlig tillväxttakt  
+- trendbrott  
+- full prognos per år till 2033  
+- kapacitetskonsekvenser
+
+Källor:
+- ^1 [aggregated_students](aggregated_students)",aggregated_students,1300
+67,2026-01-16 09:31:10.097455,a4b3adc8-f8fe-4cdc-948d-f59f2fbd5c2c,det finns 4 år av historisk data 2022-2025 och det finns prognos 2026-2030 i data,"Här är **korrigerad och fullständig analys** för **Hisingen** baserat på **2022–2025 historik** och **2026–2030 prognos**.
+
+---
+
+## Historik – genomsnittligt elevantal per skola (Hisingen)
+
+**Antal skolor med data:** 8
+
+### 2022
+- Totalt elevantal: **5 035**
+- Genomsnitt/skola: 5 035 / 8 = **629**
+- Referensår
+
+### 2023
+- Totalt elevantal: **4 933**
+- Genomsnitt/skola: 4 933 / 8 = **617**
+- Förändring: −12 elever (**−1,9 %**)
+
+### 2024
+- Totalt elevantal: **5 028**
+- Genomsnitt/skola: 5 028 / 8 = **629**
+- Förändring: +12 elever (**+1,9 %**)
+
+### 2025
+- Totalt elevantal: **4 863**
+- Genomsnitt/skola: 4 863 / 8 = **608**
+- Förändring: −21 elever (**−3,3 %**)
+
+### Historisk trend 2022–2025
+- Total förändring: 608 − 629 = **−21 elever**
+- CAGR: (608 / 629)^(1/3) − 1 ≈ **−1,1 % per år**
+- **Tydlig svagt nedåtgående trend**
+
+---
+
+## Prognos – genomsnittligt elevantal per skola (Hisingen)
+
+**Grund:** Prognos för förväntade nybörjare (F) 2026–2030  
+**Antagande:** Antal skolor konstant = 8
+
+### Prognosdata (Expected Entrants F)
+- 2026: 566
+- 2027: 571
+- 2028: 509
+- 2029: 498
+- 2030: 551
+
+### Genomsnittlig prognosnivå
+- Medel 2026–2030: (566+571+509+498+551) / 5 = **539**
+- Prognosticerat genomsnitt/skola: **≈540 elever**
+
+### Jämförelse mot 2025
+- 608 → 540 = **−68 elever**
+- Förändring: **−11,2 % till 2030**
+
+---
+
+## Strategiska slutsatser
+
+- **Efterfrågan minskar strukturellt** i Hisingen
+- **Kapacitetsöverskott riskeras** i större skolor (>700 platser)
+- **Personalplanering:** Justera mot −1 % elevminskning/år
+- **Rekommendation:** Samordna upptagningsområden före nybyggnation
+
+Vill du nästa steg:
+- kapacitetsutnyttjande per skola  
+- prognos per enskild skola  
+- jämförelse Hisingen vs övriga stadsdelar
+
+Källor:
+- ^1 [prognos.csv](prognos.csv)
+- ^2 [grundskoleforvaltning_goteborg_syntetisk_data.csv](grundskoleforvaltning_goteborg_syntetisk_data.csv)","prognos.csv,prognos.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,prognos.csv,prognos.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,prognos.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,prognos.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,prognos.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,prognos.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv,grundskoleforvaltning_goteborg_syntetisk_data.csv",1878
+66,2026-01-16 09:24:45.498829,5de1ac3f-88f3-4d53-bb96-593c26f6f7fd,Genomsnittligt elevantal på Hisingen - historik och prognos,"**Genomsnittligt elevantal – Hisingen**
+
+**Historik (tillgänglig data)**
+- **År 2025:** 8 skolor
+- **Totalt elevantal:** 4 863
+- **Genomsnitt per skola:** 4 863 / 8 = **608 elever**
+- **Spridning:** 464–757 elever per skola
+- **Kommentar:** Endast ett år → ingen trend kan beräknas
+
+**Prognos**
+- **Status:** Kan ej beräknas
+- **Orsak:** Behöver minst **2 års data** för tillväxttakt
+- **Nästa steg:** Tillför 2023–2024 elevantal för prognos 2026–2030
+
+**Snabb insikt**
+- **Relativt högt snitt (608)** indikerar större enheter
+- **Kapacitetsanalys** rekommenderas för skolor >650 elever
+
+Källor:
+- ^1 [aggregated_students](aggregated_students)",aggregated_students,643
+65,2026-01-16 09:24:00.496706,0efb0904-6ec9-454e-af72-e96791e90fb2,Hur många elever finns det totalt?,"- **Totalt antal elever:** **15 092**
+- **År:** 2025
+- **Antal skolor:** 30
+- **Beräkning:** Summa av elevantal per skola = 15 092
+- **Genomsnitt per skola:** 15 092 / 30 = **503 elever**
+
+Källor:
+- ^1 [aggregated_students](aggregated_students)",aggregated_students,244
+64,2026-01-16 09:18:27.019391,6cbc3ef0-eca0-4570-bdc3-e84898572b80,Vilka skolor har högst underhållsskuld?,"**Skolor med högst underhållsskuld (2025)**  
+*Proxy: hög årlig Maintenance_Cost_MSEK*
+
+- **Skola_23**: 17,49 MSEK  
+  - Byggår 1962 → **63 år** (≈ **95 % över snittkostnad** 8,96)
+- **Skola_14**: 15,20 MSEK  
+  - Byggår 2003 → **22 år** (≈ **70 % över snitt**)
+- **Skola_29**: 14,18 MSEK  
+  - Byggår 1958 → **67 år** (≈ **58 % över snitt**)
+- **Skola_08**: 12,73 MSEK  
+  - Byggår 2016 → **9 år** (≈ **42 % över snitt**)
+- **Skola_27**: 12,33 MSEK  
+  - Byggår 1968 → **57 år** (≈ **38 % över snitt**)
+
+**Tolkning & åtgärd**
+- Äldre byggnader dominerar → ålder driver skuld.
+- Avvikare: **Skola_08** är ny men dyr → indikera felinvestering/teknikproblem.
+- Prioritera **Skola_23, 29, 27** för strukturella åtgärder.
+- Genomför riktad teknisk revision av **Skola_08**.
+
+Källor:
+- ^1 [aggregated_maintenance](aggregated_maintenance)",aggregated_maintenance,832
+63,2026-01-16 09:18:11.239288,37668bba-5c8c-4f7e-b48a-ab16ead10d12,Hur ser inskrivningstrenden ut i Centrum?,"**Inskrivningstrend i Centrum (2022–2025)**
+
+- Totalt elevantal ökade 2022–2024: +212 elever (+6,2%)
+- Toppår 2024: 3 606 elever
+- Minskning 2024–2025: −129 elever (−3,6%)
+- Nettoutveckling 2022–2025: +83 elever (+2,4%)
+
+**Årliga förändringar**
+- 2022→2023: +54 elever (+1,6%)
+- 2023→2024: +158 elever (+4,6%) stark tillväxt
+- 2024→2025: −129 elever (−3,6%) tydlig nedgång
+
+**Tolkning**
+- Trendbrott 2025 efter två tillväxtår
+- Ökad volatilitet: variation från +4,6% till −3,6%
+- Indikerar minskat inflöde eller ökad utflyttning 2025
+
+**Framåtblick (baserat på nya inskrivningar)**
+- Förskoleklass minskar 2026–2029: 751 → 616 (−18%)
+- Stabilisering runt ~620 barn/år från 2030
+- Pekar mot fortsatt svagt elevunderlag kortsiktigt
+
+**Strategiska slutsatser**
+- Planera kapacitet för svagare efterfrågan 2026–2029
+- Undvik permanent expansion efter 2024-toppen
+- Följ kohorternas genomslag i åk 1–3 noggrant
+
+Källor:
+- ^1 [aggregated_trend](aggregated_trend)",aggregated_trend,956
