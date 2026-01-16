@@ -2,6 +2,8 @@
 
 SkolAnalys är en AI-driven plattform för analys av skoldata. Den använder RAG (Retrieval Augmented Generation) med PostgreSQL + pgvector för vektor-sökning och Gemini/OpenAI AI för att ge insikter baserade på faktiska skoldata.
 
+🚀 **Live Demo:** https://school-insights-rag.onrender.com/
+
 ## Projektöversikt
 
  Projektet transformerar skoldata (CSV-filer) till användbara insikter genom:
@@ -82,14 +84,8 @@ CSV-filerna ska ligga i `data/`-mappen:
 
 ```
 data/
-├── prognosbarn_0_5_forecast.csv          # Prognos för barn 0-5 år
-├── skollokaler_facilities.csv            # Skolanläggningar och kapacitet
-├── elever_students.csv                   # Elevdata per skola
-├── personal_staff.csv                    # Personaldata
-├── ekonomi_economy.csv                   # Ekonomiska nyckeltal
-├── scenarios_skolstruktur.csv            # Konsolideringsscenarier
-├── prognos_forvantade_entrants_F.csv    # Förväntade entrants
-└── grundskoleforvaltning_goteborg_syntetisk_data.csv  # Göteborg skoldata
+├── prognos.csv    # förväntade entrants
+└── grundskoleforvaltning_goteborg_syntetisk_data.csv  # samlad skoldata
 ```
 
 Ladda upp data till PostgreSQL:
@@ -98,29 +94,19 @@ Ladda upp data till PostgreSQL:
 # Ladda upp alla filer
 python ingest_school_data_postgres.py data/
 
-# Eller en specifik fil
-python ingest_school_data_postgres.py "data/elever_students.csv"
 ```
 
 **Vad ingestionen gör:**
 1. Läser CSV-fil
-2. Delar upp i chunks (10 rader per chunk)
+2. Delar upp i chunks (5 rader per chunk)
 3. Embeddar varje chunk med Gemini
 4. Lagrar i PostgreSQL med vektor-index
 
-**Verifiera ingestningen:**
-```bash
-python check_db_file_presence.py elever_students.csv
-```
 
 ## Köra applikationen
 
 ### Lokal utveckling
 ```bash
-# Terminal 1: Starta PostgreSQL (om lokalt)
-# (redan igång på Render)
-
-# Terminal 2: Starta FastAPI
 uvicorn app:app --reload --port 8000
 ```
 
@@ -154,8 +140,7 @@ SkolAnalys/
 ├── rag_backend_postgres.py             # RAG-logik med PostgreSQL + pgvector
 ├── ingest_school_data_postgres.py      # CSV-ingestscript för PostgreSQL
 ├── setup_postgres.py                   # Initialisera PostgreSQL (pgvector extension)
-├── check_db_file_presence.py           # Verifiera vilka filer är ingestade
-├── sql_aggregator.py                   # SQL-aggregation för distriktsnivå-frågor
+├── reset_and_ingest.py                 # Reset databas och ladda om data
 ├── system_prompt.txt                   # AI:s instruktioner och fokusområden
 ├── requirements.txt                    # Python-beroenden
 ├── render.yaml                         # Render deployment-config
@@ -170,31 +155,13 @@ SkolAnalys/
 
 ### CSV-data som stöds
 
-1. **Göteborg skoldata**: `grundskoleforvaltning_goteborg_syntetisk_data.csv`
+1. **Samlad skoldata**: `grundskoleforvaltning_goteborg_syntetisk_data.csv`
    - 30 skolor × 4 år (2022-2025)
    - Kolumner: elevantal, inskriving, lärar-ratio, underhål, kostnader, etc.
    - Stöder district-nivå aggregation (Hisingen, Sydväst, Centrum, Västra)
 
-2. **Prognos för barn (0-5)**: `prognosbarn_0_5_forecast.csv`
-   - Befolkningsprognoser per distrikt och år
-
-3. **Skolanläggningar**: `skollokaler_facilities.csv`
-   - Byggnad, område, kapacitet, underhållsbehov, energi
-
-4. **Elevdata**: `elever_students.csv`
-   - Inskriving, betyg, särskilda behov, bakgrund
-
-5. **Personal**: `personal_staff.csv`
-   - Lärare, support, sjukfrånvaro, turnover
-
-6. **Ekonomi**: `ekonomi_economy.csv`
-   - Kostnader, budget per elev, driftskostnader
-
-7. **Scenarier**: `scenarios_skolstruktur.csv`
-   - Konsolideringsplaner och alternativ
-
-8. **Prognoser**: `prognos_forvantade_entrants_F.csv`
-   - Förväntade nya elever
+2. **Prognoser**: `prognos.csv`
+   - Förväntade nya elever (2026-2033)
 
 ### Exempel på analysfrågor
 
@@ -241,7 +208,7 @@ System använder två strategier:
 - Kör `python setup_postgres.py` för att skapa extension
 
 ### Inga resultat från sökning
-- Säkerställ att data är inladdat: `python check_db_file_presence.py elever_students.csv`
+- Säkerställ att data är inladdat genom att kontrollera databasen
 - Kontrollera chunking-resultatet
 - Prova en enklare söksträng
 
@@ -267,11 +234,7 @@ I `ingest_school_data_postgres.py`, ändra:
 chunks = create_chunks_from_csv(filepath, filename, chunk_size=5)  # fler chunks
 ```
 
-### Lägg till ny distrikt-aggregation
-Lägg till i `sql_aggregator.py`:
-```python
-districts = ["Hisingen", "Sydväst", "Centrum", "Västra", "NY_DISTRIKT"]
-```
+
 
 ## Deployment
 

@@ -92,9 +92,9 @@ Render kommer automatiskt att installera dependencies från `requirements.txt`.
 ## Steg 7: Verifiera Deployment
 
 1. Vänta på att Web Service är deployed (2-3 minuter)
-2. Du får en URL som: `https://skolanalys-api.onrender.com`
-3. Testa health check: `https://skolanalys-api.onrender.com/health`
-4. Öppna UI: `https://skolanalys-api.onrender.com/`
+2. Du får en URL som: `https://school-insights-rag.onrender.com`
+3. Testa health check: `https://school-insights-rag.onrender.com/health`
+4. Öppna UI: `https://school-insights-rag.onrender.com/`
 
 ## Lokal Development
 
