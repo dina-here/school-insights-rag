@@ -1,6 +1,6 @@
 # SkolAnalys - School Data Analysis Platform
 
-SkolAnalys är en AI-driven plattform för analys av skoldata. Den använder RAG (Retrieval Augmented Generation) med PostgreSQL + pgvector för vektor-sökning och Gemini/OpenAI AI för att ge insikter baserade på faktiska skoldata.
+SkolAnalys är en AI-driven plattform för analys av skoldata. Den använder RAG (Retrieval Augmented Generation) med PostgreSQL + pgvector för vektor-sökning och OpenAI/Gemini för att ge insikter baserade på faktiska skoldata. Gemini styrs via feature flaggen `ENABLE_GEMINI` och är avstängd som standard.
 
 🚀 **Live Demo:** https://school-insights-rag.onrender.com/
 
@@ -9,7 +9,7 @@ SkolAnalys är en AI-driven plattform för analys av skoldata. Den använder RAG
  Projektet transformerar skoldata (CSV-filer) till användbara insikter genom:
 - **Data Ingest**: Laddar upp CSV-data till PostgreSQL med pgvector-embeddings. CSV-struktur/kolumnnamn kan bytas ut mot verkliga data så länge filerna ligger i `data/` och har header-rad; innehållet chunktas som fri text, så modellen kan hantera andra kolumner utan schemaändring.
 - **Semantic Search**: Hämtar relevant data baserat på användarfrågor via pgvector
-- **AI Analysis**: Använder Gemini/OpenAI för att analysera och presentera insikter
+- **AI Analysis**: Använder OpenAI som standard och Gemini när `ENABLE_GEMINI=true`
 - **Web Interface**: Användarvänligt gränssnitt för att interagera med analysen
 - **SQL Aggregation**: Direkt SQL för distriktsnivå-analyser (genomsnitt, trender)
 
@@ -17,7 +17,7 @@ SkolAnalys är en AI-driven plattform för analys av skoldata. Den använder RAG
 
 **pgvector** är en PostgreSQL-extension som lagrar och söker vektorer (embeddings) effektivt. När data ingestas:
 1. CSV-rader delas in i **chunks** (små textblock, default 10 rader per chunk)
-2. Varje chunk embeddas via Gemini API → blir en vektor (768-dimensionell vektor)
+2. Varje chunk embeddas via OpenAI som standard, eller Gemini om `ENABLE_GEMINI=true` → blir en vektor som normaliseras till projektets pgvector-dimension (default 768)
 3. Vektorn lagras i PostgreSQL med pgvector
 4. Vid sökning: användarfrågan embeddas → söks mot alla vektorer via cosine distance
 5. De mest relevanta chunks returneras för AI-analys
@@ -33,8 +33,8 @@ SkolAnalys är en AI-driven plattform för analys av skoldata. Den använder RAG
 ### 1. Förutsättningar
 - Python 3.10+
 - PostgreSQL (lokalt eller Render)
-- Google Gemini API-nyckel
-- OpenAI API-nyckel (valfritt, som fallback)
+- OpenAI API-nyckel
+- Google Gemini API-nyckel (valfritt, endast om `ENABLE_GEMINI=true`)
 
 ### 2. Installera beroenden
 
@@ -44,7 +44,8 @@ pip install -r requirements.txt
 
 Detta installerar:
 - `fastapi` & `uvicorn` - Web server
-- `google-genai` - Gemini embeddings
+- `google-genai` - Gemini chat och embeddings när feature flaggen är på
+- `openai` - Chat och embeddings
 - `psycopg2-binary` - PostgreSQL driver
 - `python-dotenv` - Environment variables
 
@@ -53,12 +54,15 @@ Detta installerar:
 Skapa en `.env`-fil i projektrotmappen:
 
 ```env
+ENABLE_GEMINI=false
 GEMINI_API_KEY=din-gemini-api-nyckel
-OPENAI_API_KEY=din-openai-api-nyckel (optional)
+OPENAI_API_KEY=din-openai-api-nyckel
 DATABASE_URL=postgresql://user:password@localhost/skolanalys_db
 SYSTEM_PROMPT_PATH=system_prompt.txt
 EMBED_DIM=768
 ```
+
+Använd `ENABLE_GEMINI=false` för OpenAI-only. Sätt `ENABLE_GEMINI=true` för att aktivera Gemini igen.
 
 **Lokalt PostgreSQL-setup:**
 ```bash
@@ -99,7 +103,7 @@ python ingest_school_data_postgres.py data/
 **Vad ingestionen gör:**
 1. Läser CSV-fil
 2. Delar upp i chunks (5 rader per chunk)
-3. Embeddar varje chunk med Gemini
+3. Embeddar varje chunk med OpenAI eller Gemini beroende på `ENABLE_GEMINI`
 4. Lagrar i PostgreSQL med vektor-index
 
 
@@ -192,8 +196,9 @@ System använder två strategier:
 
 | Variabel | Beskrivning | Obligatorisk |
 |----------|-------------|------------|
-| `GEMINI_API_KEY` | Google Gemini API-nyckel | Ja |
-| `OPENAI_API_KEY` | OpenAI API-nyckel (fallback) | Nej |
+| `ENABLE_GEMINI` | Slår på/av Gemini (`true`/`false`) | Nej (default: `false`) |
+| `GEMINI_API_KEY` | Google Gemini API-nyckel | Nej, men krävs om `ENABLE_GEMINI=true` |
+| `OPENAI_API_KEY` | OpenAI API-nyckel för chat och embeddings | Ja för standardläget och som fallback |
 | `DATABASE_URL` | PostgreSQL connection string | Ja |
 | `EMBED_DIM` | Embedding dimension (pgvector) | Nej (default: 768) |
 | `SYSTEM_PROMPT_PATH` | Path till system prompt | Nej (default: system_prompt.txt) |
@@ -212,10 +217,15 @@ System använder två strategier:
 - Kontrollera chunking-resultatet
 - Prova en enklare söksträng
 
-### Gemini API-fel (quota slut)
-- Free tier har daglig begränsning
-- OpenAI används som fallback om konfigurerad
-- Vänta till nästa dag eller uppgradera till Gemini paid
+### OpenAI API-fel
+- Kontrollera att `OPENAI_API_KEY` är korrekt satt
+- Verifiera quota/billing i OpenAI-kontot
+- Kör om ingestion eller chat när nyckeln fungerar igen
+
+### Gemini API-fel
+- Kontrollera att `ENABLE_GEMINI=true`
+- Kontrollera att `GEMINI_API_KEY` är korrekt satt
+- Om Gemini fallerar används OpenAI som fallback när `OPENAI_API_KEY` finns
 
 ### Chunking-problem (få resultat)
 - Standard: `chunk_size=10` rader per chunk

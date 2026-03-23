@@ -78,12 +78,15 @@ I Render Web Service dashboard:
 2. Lägg till följande (säkra) variabler:
 
 ```
+ENABLE_GEMINI=false
 GEMINI_API_KEY=din-gemini-api-key
 OPENAI_API_KEY=din-openai-api-key
 DATABASE_URL=postgresql://user:pass@host.render.com/dbname
 SYSTEM_PROMPT_PATH=system_prompt.txt
 EMBED_DIM=768
 ```
+
+Lämna `ENABLE_GEMINI=false` för OpenAI-only. Byt till `true` när du vill aktivera Gemini igen.
 
 3. Klicka **"Save"**
 
@@ -109,7 +112,9 @@ uvicorn app:app --reload --port 8000
 
 ## Tips
 
-- **Gemini quota**: Free tier har daglig begränsning. Vid quota slut, vänta till nästa dag eller betala för Gemini API
+- **Gemini feature flag**: `ENABLE_GEMINI=false` håller Gemini helt avstängt utan att ta bort koden
+- **OpenAI quota**: Kontrollera usage och billing i OpenAI dashboard om requests börjar fallera
+- **Gemini quota**: Om du aktiverar Gemini gäller dess vanliga quota-regler och OpenAI kan användas som fallback
 - **PostgreSQL gratis tier**: Expires efter 90 dagar. Uppgradera vid behov
 - **Logs**: Se deployment logs i Render dashboard under "Logs"-fliken
 - **Miljövariabler**: Aldrig commita `.env` till Git (redan i `.gitignore`)
@@ -148,6 +153,12 @@ pg_restore -h render-host -U postgres -d dbname backup.dump
 - Verify all environment variables are set
 - Check `PINECONE_INDEX_HOST` format (no `https://`)
 - Ensure Pinecone index dimension = `EMBED_DIM`
+
+### OpenAI Errors
+- Check API key is valid
+- Monitor usage and billing in the OpenAI dashboard
+- Review Render logs for exact API error details
+- Verify `OPENAI_API_KEY` is present in the service environment
 
 ### Gemini Quota Errors
 - Check API key is valid
