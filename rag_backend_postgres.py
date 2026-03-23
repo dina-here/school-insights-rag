@@ -17,21 +17,13 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-
-def _is_env_flag_enabled(name: str, default: str = "false") -> bool:
-    return os.getenv(name, default).strip().lower() in {"1", "true", "yes", "on"}
-
-ENABLE_GEMINI = _is_env_flag_enabled("ENABLE_GEMINI", "false")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DATABASE_URL = os.environ["DATABASE_URL"]
 TARGET_DIM = int(os.getenv("EMBED_DIM", "768"))
 
-client = genai.Client(api_key=GEMINI_API_KEY) if ENABLE_GEMINI and GEMINI_API_KEY else None
+client = genai.Client(api_key=GEMINI_API_KEY)
 openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
-
-if ENABLE_GEMINI and not GEMINI_API_KEY:
-    logger.warning("ENABLE_GEMINI is true but GEMINI_API_KEY is missing. Using OpenAI embeddings instead.")
 
 
 def get_district_aggregation(query: str) -> Dict[str, Any] | None:
@@ -118,30 +110,23 @@ def aggregate_district_foreign_background(district: str) -> Dict[str, Any]:
 
 
 def embed_query(text: str) -> List[float]:
-    """Embed query text using Gemini when enabled, otherwise OpenAI."""
-
-    if client:
-        try:
-            res = client.models.embed_content(
-                model="gemini-embedding-001",
-                contents=text,
-            )
-            vec = res.embeddings[0].values
-        except Exception as e:
-            logger.warning(f"Gemini embedding failed, falling back to OpenAI: {e}")
-            vec = None
-    else:
-        vec = None
-
-    if vec is None:
-        if not openai_client:
-            raise RuntimeError("No embedding provider available. Configure OPENAI_API_KEY or enable Gemini with GEMINI_API_KEY.")
-
-        response = openai_client.embeddings.create(
-            model="text-embedding-3-small",
-            input=text
+    """Embed query text using Gemini, with OpenAI fallback if quota exceeded."""
+    try:
+        res = client.models.embed_content(
+            model="gemini-embedding-001",
+            contents=text,
         )
-        vec = response.data[0].embedding
+        vec = res.embeddings[0].values
+    except Exception:
+        # Fallback to OpenAI if Gemini fails and OpenAI is configured
+        if openai_client:
+            response = openai_client.embeddings.create(
+                model="text-embedding-3-small",
+                input=text
+            )
+            vec = response.data[0].embedding
+        else:
+            raise
     
     # Ensure dimension matches target
     n = len(vec)

@@ -23,59 +23,125 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-
-def _is_env_flag_enabled(name: str, default: str = "false") -> bool:
-    return os.getenv(name, default).strip().lower() in {"1", "true", "yes", "on"}
-
-ENABLE_GEMINI = _is_env_flag_enabled("ENABLE_GEMINI", "false")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DATABASE_URL = os.environ["DATABASE_URL"]
 TARGET_DIM = int(os.getenv("EMBED_DIM", "768"))
 
-client = genai.Client(api_key=GEMINI_API_KEY) if ENABLE_GEMINI and GEMINI_API_KEY else None
+client = genai.Client(api_key=GEMINI_API_KEY)
 openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
-if ENABLE_GEMINI and not GEMINI_API_KEY:
-    logger.warning("ENABLE_GEMINI is true but GEMINI_API_KEY is missing. Using OpenAI embeddings instead.")
-
-
-def _normalize_embedding_dimension(vec: List[float]) -> List[float]:
-    """Normalize embedding length to the configured pgvector dimension."""
-    n = len(vec)
-    if n == TARGET_DIM:
-        return vec
-    if n % TARGET_DIM == 0:
-        step = n // TARGET_DIM
-        return [sum(vec[i * step:(i + 1) * step]) / step for i in range(TARGET_DIM)]
-    stride = n / TARGET_DIM
-    return [vec[int(i * stride)] for i in range(TARGET_DIM)]
+# Track OpenAI usage
+OPENAI_USAGE_TRACKER = {
+    "total_requests": 0,
+    "max_openai_requests": 15,
+}
 
 
 def embed_text(text: str) -> List[float]:
-    """Embed text using Gemini when enabled, otherwise OpenAI."""
-
-    if client:
-        try:
+    """Embed text using Gemini with optional OpenAI fallback."""
+    
+    # Try Gemini first
+    try:
+        res = client.models.embed_content(
+            model="gemini-embedding-001",
+            contents=text,
+        )
+        vec = res.embeddings[0].values
+        
+        # Ensure dimension matches target
+        n = len(vec)
+        if n == TARGET_DIM:
+            return vec
+        if n % TARGET_DIM == 0:
+            step = n // TARGET_DIM
+            return [sum(vec[i*step:(i+1)*step]) / step for i in range(TARGET_DIM)]
+        stride = n / TARGET_DIM
+        return [vec[int(i*stride)] for i in range(TARGET_DIM)]
+        
+    except genai_errors.ClientError as e:
+        if "RESOURCE_EXHAUSTED" in str(e) or "429" in str(e):
+            logger.warning("Gemini quota exhausted (429). Trying OpenAI fallback...")
+            # Fall through to OpenAI fallback below
+        else:
+            logger.error(f"Gemini error: {e}")
+            raise
+    except Exception as e:
+        logger.error(f"Unexpected error with Gemini: {e}")
+        raise
+    
+    # Fallback to OpenAI if Gemini fails (limited usage for cost control)
+    if openai_client:
+        if OPENAI_USAGE_TRACKER["total_requests"] < OPENAI_USAGE_TRACKER["max_openai_requests"]:
+            try:
+                logger.info(f"Using OpenAI fallback ({OPENAI_USAGE_TRACKER['total_requests']}/{OPENAI_USAGE_TRACKER['max_openai_requests']})...")
+                response = openai_client.embeddings.create(
+                    model="text-embedding-3-small",
+                    input=text
+                )
+                OPENAI_USAGE_TRACKER["total_requests"] += 1
+                vec = response.data[0].embedding
+                
+                n = len(vec)
+                if n == TARGET_DIM:
+                    return vec
+                if n % TARGET_DIM == 0:
+                    step = n // TARGET_DIM
+                    return [sum(vec[i*step:(i+1)*step]) / step for i in range(TARGET_DIM)]
+                stride = n / TARGET_DIM
+                return [vec[int(i*stride)] for i in range(TARGET_DIM)]
+                
+            except Exception as e:
+                logger.warning(f"OpenAI embedding failed: {e}. Retrying with Gemini after delay...")
+                time.sleep(3)  # Wait before retrying Gemini
+                # Retry Gemini once more
+                res = client.models.embed_content(
+                    model="gemini-embedding-001",
+                    contents=text,
+                )
+                vec = res.embeddings[0].values
+                n = len(vec)
+                if n == TARGET_DIM:
+                    return vec
+                if n % TARGET_DIM == 0:
+                    step = n // TARGET_DIM
+                    return [sum(vec[i*step:(i+1)*step]) / step for i in range(TARGET_DIM)]
+                stride = n / TARGET_DIM
+                return [vec[int(i*stride)] for i in range(TARGET_DIM)]
+        else:
+            logger.error("OpenAI quota reached. Retrying with Gemini after delay...")
+            time.sleep(3)
+            # Retry Gemini
             res = client.models.embed_content(
                 model="gemini-embedding-001",
                 contents=text,
             )
-            return _normalize_embedding_dimension(res.embeddings[0].values)
-        except genai_errors.ClientError as e:
-            logger.warning(f"Gemini embedding failed, trying OpenAI fallback: {e}")
-        except Exception as e:
-            logger.warning(f"Unexpected Gemini embedding error, trying OpenAI fallback: {e}")
-            time.sleep(1)
-
-    if not openai_client:
-        raise RuntimeError("No embedding provider available. Configure OPENAI_API_KEY or enable Gemini with GEMINI_API_KEY.")
-
-    response = openai_client.embeddings.create(
-        model="text-embedding-3-small",
-        input=text
-    )
-    return _normalize_embedding_dimension(response.data[0].embedding)
+            vec = res.embeddings[0].values
+            n = len(vec)
+            if n == TARGET_DIM:
+                return vec
+            if n % TARGET_DIM == 0:
+                step = n // TARGET_DIM
+                return [sum(vec[i*step:(i+1)*step]) / step for i in range(TARGET_DIM)]
+            stride = n / TARGET_DIM
+            return [vec[int(i*stride)] for i in range(TARGET_DIM)]
+    else:
+        logger.warning("No OpenAI fallback configured. Retrying with Gemini after delay...")
+        time.sleep(3)
+        # Retry Gemini
+        res = client.models.embed_content(
+            model="gemini-embedding-001",
+            contents=text,
+        )
+        vec = res.embeddings[0].values
+        n = len(vec)
+        if n == TARGET_DIM:
+            return vec
+        if n % TARGET_DIM == 0:
+            step = n // TARGET_DIM
+            return [sum(vec[i*step:(i+1)*step]) / step for i in range(TARGET_DIM)]
+        stride = n / TARGET_DIM
+        return [vec[int(i*stride)] for i in range(TARGET_DIM)]
 
 
 def load_csv_file(filepath: str) -> List[Dict[str, Any]]:

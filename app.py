@@ -28,25 +28,17 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-
-def _is_env_flag_enabled(name: str, default: str = "false") -> bool:
-    return os.getenv(name, default).strip().lower() in {"1", "true", "yes", "on"}
-
-ENABLE_GEMINI = _is_env_flag_enabled("ENABLE_GEMINI", "false")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 SYSTEM_PROMPT_PATH = os.getenv("SYSTEM_PROMPT_PATH", "system_prompt.txt")
 # SYSTEM_PROMPT_PATH = os.getenv("SYSTEM_PROMPT_PATH", "../system_prompt.txt")
 
-MODEL_ID = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.2-chat-latest")
+MODEL_ID = "gemini-2.0-flash"  # any chat-capable Gemini model you have access to 
+OPENAI_MODEL = "gpt-5.2-chat-latest"  # OpenAI fallback model
 SYSTEM_PROMPT = Path(SYSTEM_PROMPT_PATH).read_text(encoding="utf-8")
 
-client = genai.Client(api_key=GEMINI_API_KEY) if ENABLE_GEMINI and GEMINI_API_KEY else None
+client = genai.Client(api_key=GEMINI_API_KEY)
 openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
-
-if ENABLE_GEMINI and not GEMINI_API_KEY:
-    logger.warning("ENABLE_GEMINI is true but GEMINI_API_KEY is missing. Falling back to OpenAI.")
 
 app = FastAPI(title="School Analysis API")
 
@@ -241,86 +233,90 @@ def chat(req: ChatRequest):
         + context
     )
 
+    # 3) Convert into Gemini-style contents
     contents = [{"role": "user", "parts": [{"text": system_and_context}]}]
     for m in req.history:
         contents.append({"role": m.role, "parts": [{"text": m.content}]})
     contents.append({"role": "user", "parts": [{"text": message}]})
 
-    openai_messages = [
-        {"role": "system", "content": system_and_context}
-    ]
-    for m in req.history:
-        openai_messages.append({
-            "role": "assistant" if m.role == "model" else m.role,
-            "content": m.content,
-        })
-    openai_messages.append({"role": "user", "content": message})
-
     answer = None
-
-    if client:
+    
+    # Try Gemini first
+    try:
+        result = client.models.generate_content(
+            model=MODEL_ID,
+            contents=contents,
+        )
+        answer = result.text.strip()
+        # Collect Gemini usage if available
         try:
-            result = client.models.generate_content(
-                model=MODEL_ID,
-                contents=contents,
-            )
-            answer = result.text.strip()
+            usage = getattr(result, "usage_metadata", None)
+            prompt_t = getattr(usage, "prompt_token_count", 0) if usage else 0
+            completion_t = getattr(usage, "candidates_token_count", 0) if usage else 0
+            total_t = getattr(usage, "total_token_count", 0) if usage else (prompt_t + completion_t)
+            with _metrics_lock:
+                METRICS["gemini_calls"] += 1
+                METRICS["prompt_tokens"] += int(prompt_t or 0)
+                METRICS["completion_tokens"] += int(completion_t or 0)
+                METRICS["total_tokens"] += int(total_t or 0)
+            logger.info(f"Gemini tokens: prompt={prompt_t}, completion={completion_t}, total={total_t}")
+        except Exception as _:
+            # Non-fatal if usage not available
+            pass
+    except genai_errors.ClientError as e:
+        # Log Gemini error
+        logger.error(f"Gemini error: {e}")
+        # Fallback to OpenAI on Gemini errors when available
+        if openai_client:
             try:
-                usage = getattr(result, "usage_metadata", None)
-                prompt_t = getattr(usage, "prompt_token_count", 0) if usage else 0
-                completion_t = getattr(usage, "candidates_token_count", 0) if usage else 0
-                total_t = getattr(usage, "total_token_count", 0) if usage else (prompt_t + completion_t)
+                # Convert history to OpenAI format
+                openai_messages = [
+                    {"role": "system", "content": system_and_context}
+                ]
+                for m in req.history:
+                    openai_messages.append({
+                        "role": "assistant" if m.role == "model" else m.role,
+                        "content": m.content
+                    })
+                openai_messages.append({"role": "user", "content": message})
+                
+                # Call OpenAI with gpt-5.2-chat-latest
+                response = openai_client.chat.completions.create(
+                    model=OPENAI_MODEL,
+                    messages=openai_messages,
+                    max_completion_tokens=1500,
+                )
+                answer = response.choices[0].message.content.strip()
+                # Collect OpenAI usage
+                try:
+                    usage = getattr(response, "usage", None)
+                    prompt_t = getattr(usage, "prompt_tokens", None)
+                    completion_t = getattr(usage, "completion_tokens", None)
+                    total_t = getattr(usage, "total_tokens", None)
+                    with _metrics_lock:
+                        METRICS["openai_calls"] += 1
+                        METRICS["prompt_tokens"] += int(prompt_t or 0)
+                        METRICS["completion_tokens"] += int(completion_t or 0)
+                        METRICS["total_tokens"] += int(total_t or 0)
+                    logger.info(f"OpenAI tokens: prompt={prompt_t}, completion={completion_t}, total={total_t}")
+                except Exception:
+                    with _metrics_lock:
+                        METRICS["openai_calls"] += 1
+            except Exception as oe:
+                # Log OpenAI error
+                logger.error(f"OpenAI error: {oe}")
                 with _metrics_lock:
-                    METRICS["gemini_calls"] += 1
-                    METRICS["prompt_tokens"] += int(prompt_t or 0)
-                    METRICS["completion_tokens"] += int(completion_t or 0)
-                    METRICS["total_tokens"] += int(total_t or 0)
-                logger.info(f"Gemini tokens: prompt={prompt_t}, completion={completion_t}, total={total_t}")
-            except Exception:
-                with _metrics_lock:
-                    METRICS["gemini_calls"] += 1
-        except genai_errors.ClientError as e:
-            logger.error(f"Gemini error: {e}")
-        except Exception as e:
-            logger.error(f"Unexpected Gemini error: {e}")
-
-    if not answer and openai_client:
-        try:
-            response = openai_client.chat.completions.create(
-                model=OPENAI_MODEL,
-                messages=openai_messages,
-                max_completion_tokens=1500,
-            )
-            answer = (response.choices[0].message.content or "").strip()
-            try:
-                usage = getattr(response, "usage", None)
-                prompt_t = getattr(usage, "prompt_tokens", None)
-                completion_t = getattr(usage, "completion_tokens", None)
-                total_t = getattr(usage, "total_tokens", None)
-                with _metrics_lock:
-                    METRICS["openai_calls"] += 1
-                    METRICS["prompt_tokens"] += int(prompt_t or 0)
-                    METRICS["completion_tokens"] += int(completion_t or 0)
-                    METRICS["total_tokens"] += int(total_t or 0)
-                logger.info(f"OpenAI tokens: prompt={prompt_t}, completion={completion_t}, total={total_t}")
-            except Exception:
-                with _metrics_lock:
-                    METRICS["openai_calls"] += 1
-        except Exception as e:
-            logger.error(f"OpenAI error: {e}")
+                    METRICS["errors"] += 1
+                answer = "I'm sorry, I can't answer that. Please contact HR"
+        else:
+            # No OpenAI configured
+            logger.warning("OpenAI client not configured, using fallback")
             with _metrics_lock:
                 METRICS["errors"] += 1
-            answer = "I'm sorry, I can't answer that right now. Please verify OPENAI_API_KEY is configured."
-    elif not answer:
-        logger.warning("OPENAI_API_KEY is not configured")
-        with _metrics_lock:
-            METRICS["errors"] += 1
-        if ENABLE_GEMINI:
-            answer = "I'm sorry, I can't answer that right now. Please verify GEMINI_API_KEY is configured correctly."
-        else:
-            answer = "I'm sorry, I can't answer that right now. Please configure OPENAI_API_KEY or enable Gemini."
+            answer = "I'm sorry, I can't answer that. Please contact HR"
 
-    # 4) Check if answer is empty
+    # 4) Append our own “Sources” footer (the prompt also asks for this style)
+    # 4) Check if answer is empty (Gemini sometimes returns empty on complex prompts)
     if not answer or not answer.strip():
         logger.warning("Empty answer from model, using data summary")
         # Build a basic summary from retrieved docs
